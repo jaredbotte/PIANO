@@ -14,7 +14,6 @@ void PWM0_IRQHandler(){
     // This handles the DMA transfer complete interrupts.
     if(NRF_PWM0 -> EVENTS_SEQEND[0]){
         NRF_PWM0 -> EVENTS_SEQEND[0] = 0; // Reset the interrupt
-        //NRF_PWM0 -> TASKS_STOP = 1; // Stop PWM, will force a LOW state.
         NRF_PWM0 -> TASKS_SEQSTART[1] = 1; // Start the latch
         while(NRF_PWM0 -> EVENTS_SEQEND[0]); // Wait for the interrupt to be cleared
     } else {
@@ -59,7 +58,7 @@ static void setup_led_pwm_dma(){
 }
 
 void update_led_strip(){
-    while(!update_finished);
+    while(update_finished == 0);
     update_finished = 0;
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
 }
@@ -68,13 +67,13 @@ void fill_color(Color color){
     for(int n = 0; n < num_leds; n++){
         set_led(n, color);
     }
-    update_led_strip()
+    update_led_strip();
 }
 
 void set_led(int led_num, Color color){
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
     for(int i = 0; i < 24; i++){
-        buffer[(led_num * 24) + i] = ((col & (1 << (23 - i))) >> (23 - i)) * 19 + 19;
+        buffer[(led_num * 24) + i] = (((col & (1 << (23 - i))) >> (23 - i)) * 6 + 6) | 0x8000;
     }
 }
 

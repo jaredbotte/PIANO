@@ -35,9 +35,10 @@ void TIMER3_IRQHandler(){
 }
 
 int main(void) {   
-    blink_led(2);
-    initialize_led_strip(1, 17);
-    fill_color((Color) {.red=255, .green=0, .blue=0});
+    //blink_led(2);
+    initialize_led_strip(144, 17);
+    //fill_color((Color) {.red=0, .green=255, .blue=0});
+    // LEDs kind of work... colors are off...
 
     while (true){
         //main loop
