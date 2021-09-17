@@ -39,7 +39,6 @@ static void setup_led_pwm_dma(){
     // Interrupt setup
     NVIC -> ISER[0] = 1 << PWM0_IRQn;
     NRF_PWM0 -> INTENSET = PWM_INTENSET_SEQEND0_Enabled << PWM_INTENSET_SEQEND0_Pos;
-    NRF_PWM0 -> INTENSET = PWM_INTENSET_SEQEND1_Enabled << PWM_INTENSET_SEQEND1_Pos;
 }
 
 void update_led_strip(){
