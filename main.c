@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "leds.h"
 #include "nrf.h"
+#include "nrf_delay.h"
 
 void blink_led(int rate_hz){
   // This function will blink one of the LEDs at the rate specified by rate_hz
@@ -35,14 +36,22 @@ void TIMER3_IRQHandler(){
 }
 
 int main(void) {   
-    //blink_led(2);
+    //blink_led(10);
     initialize_led_strip(144, 17);
     //fill_color((Color) {.red=0, .green=255, .blue=0});
     // LEDs kind of work... colors are off...
 
     while (true){
         //main loop
-        __asm__("wfi");
+        Color red = {.red = 255, .green = 0, .blue = 0};
+        Color green = {.red = 0, .green = 255, .blue = 0};
+        Color blue = {.red = 0, .green = 0, .blue = 255};
+        nrf_delay_ms(1000);;
+        fill_color(red);
+        nrf_delay_ms(1000);
+        fill_color(green);
+        nrf_delay_ms(1000);
+        fill_color(blue);
     }
 }
 
