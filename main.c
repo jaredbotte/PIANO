@@ -38,20 +38,30 @@ void TIMER3_IRQHandler(){
 int main(void) {   
     //blink_led(10);
     initialize_led_strip(144, 17);
-    //fill_color((Color) {.red=0, .green=255, .blue=0});
-    // LEDs kind of work... colors are off...
 
     while (true){
         //main loop
-        Color red = {.red = 255, .green = 0, .blue = 0};
-        Color green = {.red = 0, .green = 255, .blue = 0};
-        Color blue = {.red = 0, .green = 0, .blue = 255};
-        nrf_delay_ms(1000);;
+        Color red = {.red = 63, .green = 0, .blue = 0};
+        Color yellow = {.red = 63, .green = 63, .blue = 0};
+        Color green = {.red = 0, .green = 63, .blue = 0};
+        Color light_blue = {.red = 0, .green = 63, .blue = 63};
+        Color blue = {.red = 0, .green = 0, .blue = 63};
+        Color purple = {.red = 63, .green = 0, .blue = 63};
+        /*nrf_delay_ms(1000);
         fill_color(red);
+        nrf_delay_ms(1000);
+        fill_color(yellow);
         nrf_delay_ms(1000);
         fill_color(green);
         nrf_delay_ms(1000);
+        fill_color(light_blue);
+        nrf_delay_ms(1000);
         fill_color(blue);
+        nrf_delay_ms(1000);
+        fill_color(purple);*/
+        set_led(2, red);
+        set_led(4, green);
+        set_led(6, blue);
     }
 }
 
