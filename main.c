@@ -9,7 +9,7 @@
  * This application uses the @ref srvlib_conn_params module.
  */
 
-
+#include <stdbool.h> // Needed for UART
 #include <stdint.h>
 #include <string.h>
 #include "nordic_common.h" // ble
@@ -33,6 +33,10 @@
 #include "app_util_platform.h" // ble
 #include "bsp_btn_ble.h" // ble
 #include "nrf_pwr_mgmt.h" // ble
+#include "leds.h" // leds
+#include "nrf_delay.h" // leds, uart
+#include "app_error.h" //uart
+
 
 // BLE
 #if defined (UART_PRESENT)
@@ -46,8 +50,8 @@
 #define FILE_NAME "Test with bluetooth.txt"
 #define TEST_STRING "This is a test string."
 #define SDC_SCK_PIN  25 // SDK
-#define SDC_MOSI_PIN 23 // DI
-#define SDC_MISO_PIN 24 // DO
+#define SDC_MOSI_PIN 26 // DI
+#define SDC_MISO_PIN 27 // DO
 #define SDC_CS_PIN 22 // CS
 
 // BOTH
@@ -810,6 +814,12 @@ int main(void)
     printf("\r\nUART started.\r\n");
     NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
+
+    // LEDs
+    initialize_led_strip(144, 17);
+
+    Color red = {.red = 63, .green = 0, .blue = 0};
+    fill_color(red);
 
     // Enter main loop.
     for (;;)
