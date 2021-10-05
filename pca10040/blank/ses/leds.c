@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include "leds.h"
 #include "nrf.h"
-#include "low_level_led.s"
 
 int num_leds;
 int led_pin;
@@ -76,4 +75,5 @@ void initialize_led_strip(int num, int pin){
     }
     setup_led_pwm_dma();
     fill_color((Color) {.red=0, .green=0, .blue=0});
+    //fill_buffer(buffer, 0x11);
 }

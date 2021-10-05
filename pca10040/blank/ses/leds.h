@@ -2,6 +2,8 @@
 #define __LEDS_H__
 #include <stdint.h>
 
+extern void fill_buffer(uint16_t* buffer, uint32_t curr_col);
+
 typedef struct _Color {
     uint8_t red;
     uint8_t green;
