@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "leds.h"
 #include "nrf.h"
+#include "low_level_led.s"
 
 int num_leds;
 int led_pin;
