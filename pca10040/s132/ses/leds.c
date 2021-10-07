@@ -69,7 +69,9 @@ void initialize_led_strip(int num, int pin){
     led_pin = pin;
     update_finished = 1;
 
-    buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
+    //buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
+
+    uint16_t buffer[num_leds*24+40];
     for(int i = num_leds * 24; i < num_leds * 24 + 40; i++){
         buffer[i] = 0x8000;
     }

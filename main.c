@@ -36,6 +36,7 @@
 #include "leds.h" // leds
 #include "nrf_delay.h" // leds, uart
 #include "app_error.h" //uart
+#include "sd_card.h"
 
 
 // BLE
@@ -49,10 +50,6 @@
 // fatfs
 #define FILE_NAME "Test with bluetooth.txt"
 #define TEST_STRING "This is a test string."
-#define SDC_SCK_PIN  25 // SDK
-#define SDC_MOSI_PIN 26 // DI
-#define SDC_MISO_PIN 27 // DO
-#define SDC_CS_PIN 22 // CS
 
 // BOTH
 #include "nrf_log.h"
@@ -81,8 +78,25 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
+#define UART_TX_BUF_SIZE                256                                        /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
+
+#define BLE_BUF_SIZE                    256
+
+bool colorChanged   = false;
+bool rChanged       = false;
+bool gChanged       = false;
+bool bChanged       = false;
+bool writeEnable    = false;
+Color led_color     = {.red = 0, .green = 0, .blue = 0};
+
+bool fileTransfer   = false;
+bool bufferFilled   = false;
+bool transferStarted = false;
+char filename[64];
+
+sd_write_buffer sd_data_buffer = {.length = 0, .data = {0x00}};
+
 
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
@@ -99,14 +113,14 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 
 
 // sdcard code
-NRF_BLOCK_DEV_SDC_DEFINE(
-        m_block_dev_sdc,
-        NRF_BLOCK_DEV_SDC_CONFIG(
-                SDC_SECTOR_SIZE,
-                APP_SDCARD_CONFIG(SDC_MOSI_PIN, SDC_MISO_PIN, SDC_SCK_PIN, SDC_CS_PIN)
-        ),
-        NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
-);
+//NRF_BLOCK_DEV_SDC_DEFINE(
+//        m_block_dev_sdc,
+//        NRF_BLOCK_DEV_SDC_CONFIG(
+//                SDC_SECTOR_SIZE,
+//                APP_SDCARD_CONFIG(SDC_MOSI_PIN, SDC_MISO_PIN, SDC_SCK_PIN, SDC_CS_PIN)
+//        ),
+//        NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
+//);
 
 /**
  * @brief Function for demonstrating FAFTS usage.
@@ -133,10 +147,13 @@ static void fatfs_example()
     NRF_LOG_INFO("Initializing disk 0 (SDC)...");
     for (uint32_t retries = 3; retries && disk_state; --retries)
     {
+        printf("%x\n", disk_state);
         disk_state = disk_initialize(0);
     }
     if (disk_state)
+ 
     {
+      
         NRF_LOG_INFO("Disk initialization failed.");
         return;
     }
@@ -292,22 +309,156 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
         NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
-        for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
-        {
-            do
-            {
-                err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
-                if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
-                {
-                    NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
-                    APP_ERROR_CHECK(err_code);
-                }
-            } while (err_code == NRF_ERROR_BUSY);
+        uint8_t data[BLE_BUF_SIZE];
+        memset(&data, 0,BLE_BUF_SIZE);
+
+        for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++) {
+            data[i] = p_evt->params.rx_data.p_data[i];
         }
-        if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
-        {
-            while (app_uart_put('\n') == NRF_ERROR_BUSY);
+        int size = p_evt->params.rx_data.length;
+
+        if (strncmp(&data, "write", 5) == 0){
+            writeEnable = true;
         }
+
+        if (strncmp(&data, "blue",4) == 0) {
+            Color blue = {.red = 0, .green = 0, .blue = 60};
+            fill_color(blue);
+            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
+        }
+
+        if (strncmp(&data, "red",3) == 0) {
+            Color red = {.red = 60, .green = 0, .blue = 0};
+            fill_color(red);
+            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
+        }
+
+        if (strncmp(&data, "green",5) == 0) {
+            Color green = {.red = 0, .green = 60, .blue = 0};
+            fill_color(green);
+            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
+        }
+
+        if (strncmp(&data, "off",3) == 0) {
+            Color off = {.red = 0, .green = 0, .blue = 0};
+            fill_color(off);
+            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
+
+        }
+
+        if (strncmp(&data, "Color_Changed",13) == 0) {
+            colorChanged = true;
+            rChanged == false;
+            gChanged == false;
+            bChanged == false;
+
+            return;
+        }
+
+        if ((colorChanged == true) && (rChanged == false) && (gChanged == false) && (bChanged == false)) {
+            if (strncmp(&data, "red",3) == 0) {
+                rChanged = true;
+            }
+            else if (strncmp(&data, "green",5) == 0) {
+                gChanged = true;
+            }
+            else if (strncmp(&data, "blue",4) == 0) {
+                bChanged = true;
+            }
+
+            return;
+        }
+
+        if ((colorChanged == true) && (rChanged == true) && (gChanged == false) && (bChanged == false) && (strncmp(&data, "red",3) != 0)) {
+            int color_value = atoi(&data);
+            led_color.red = color_value;
+            //printf("Red Color Val: %d\r\n",color_value);
+
+            fill_color(led_color);
+            colorChanged = false;
+            rChanged = false;
+
+            //return;
+        }
+        else if ((colorChanged == true) && (rChanged == false) && (gChanged == true) && (bChanged == false) && (strncmp(&data, "green",5) != 0)) {
+            int color_value = atoi(&data);
+            led_color.green = color_value;
+            //printf("Green Color Val: %d\r\n",color_value);
+
+            fill_color(led_color);
+            colorChanged = false;
+            gChanged = false;
+
+            //return;
+        }
+        else if ((colorChanged == true) && (rChanged == false) && (gChanged == false) && (bChanged == true) && (strncmp(&data, "blue",4) != 0)) {
+            int color_value = atoi(&data);
+            led_color.blue = color_value;
+            //printf("Blue Color Val: %d\r\n",color_value);
+
+            fill_color(led_color);
+            colorChanged = false;
+            bChanged = false;
+
+            //return;
+        }
+
+
+        // File transfer
+
+        if (strncmp(&data, "EOF",3) == 0) {
+            fileTransfer = false;
+            transferStarted = false;
+            printf("Transfer Completed\r\n");
+            return;
+        }
+        
+        if (strncmp(&data, "File Transfer",13) == 0) {
+            fileTransfer = true;
+            return;
+        }
+
+        if (fileTransfer && !transferStarted) {// seting filename
+            strncpy(&filename, &data, size);
+            transferStarted = true;
+            printf("File Name: %s\r\n", filename);
+            return;
+        }
+
+        if (fileTransfer && transferStarted) {//writing data
+            for (uint32_t i = 0; i < size; i++) {
+                sd_data_buffer.data[i] = data[i];
+            }
+            sd_data_buffer.length = size;
+            bufferFilled = true;
+
+            return;
+        }
+
+        
+
+
+
+
+        
+        //  for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
+        //  {
+
+
+        //      do
+        //      {
+        //          err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
+        //          if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
+        //          {
+        //              NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
+        //              APP_ERROR_CHECK(err_code);
+        //          }
+        //      } while (err_code == NRF_ERROR_BUSY);
+        //  }
+        //  if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
+        //  {
+        //      while (app_uart_put('\n') == NRF_ERROR_BUSY);
+        //  }
     }
 
 }
@@ -675,9 +826,9 @@ static void uart_init(void)
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
         .use_parity   = false,
 #if defined (UART_PRESENT)
-        .baud_rate    = NRF_UART_BAUDRATE_115200
+        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200
 #else
-        .baud_rate    = NRF_UARTE_BAUDRATE_115200
+        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200
 #endif
     };
 
@@ -789,7 +940,7 @@ int main(void)
 
     // Initialize BLE.
     uart_init();
-    log_init();
+    //log_init();
     timers_init();
     buttons_leds_init(&erase_bonds);
     power_management_init();
@@ -799,16 +950,17 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
+    fatfs_init();
 
     // Initialize FATFS
     bsp_board_init(BSP_INIT_LEDS);
 
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
+    //NRF_LOG_DEFAULT_BACKENDS_INIT();
     NRF_LOG_INFO("FATFS example started.");
 
     // run fatfs example
-    fatfs_example();
+    //fatfs_example();
 
     // Start execution.
     printf("\r\nUART started.\r\n");
@@ -816,15 +968,68 @@ int main(void)
     advertising_start();
 
     // LEDs
-    initialize_led_strip(144, 17);
+    initialize_led_strip(288, 25);
 
-    Color red = {.red = 63, .green = 0, .blue = 0};
-    fill_color(red);
 
     // Enter main loop.
     for (;;)
     {
         idle_state_handle();
+
+         if (writeEnable) {
+             FRESULT  ff_result;
+             FIL      file;
+             uint16_t bytes_written;
+
+             ff_result = f_open(&file, "Test.txt", FA_READ | FA_WRITE | FA_OPEN_APPEND);
+             if (ff_result != FR_OK) {
+                 printf("fopen failed!!!!!!!!!!!!!!!\r\n");
+                 printf("Error type %d\r\n", ff_result);
+             }
+
+             ff_result = f_write(&file, "Guten Tag", 9, (UINT*)& bytes_written);
+
+             if (ff_result != FR_OK) {
+                 printf("fwrite failed!!!!!!!!!!!!!!\r\n");
+                 printf("Error type %d\r\n", ff_result);
+             }
+
+             (void) f_close(&file);
+
+             write_to_file("Hello World!", 12, "Test.txt");
+
+             writeEnable = false;
+         }
+
+         if (fileTransfer && bufferFilled) {
+            FRESULT  ff_result;
+            FIL      file;
+            uint16_t bytes_written;
+
+            ff_result = f_open(&file, "test.mid", FA_READ | FA_WRITE | FA_OPEN_APPEND);
+            if (ff_result != FR_OK) {
+                printf("fopen failed!!!!!!!!!!!!!!!\r\n");
+                printf("Error type %d\r\n", ff_result);
+            }
+
+            ff_result = f_write(&file, sd_data_buffer.data, sd_data_buffer.length, (UINT*)& bytes_written);
+
+            if (ff_result != FR_OK) {
+                printf("fwrite failed!!!!!!!!!!!!!!\r\n");
+                printf("Error type %d\r\n", ff_result);
+            }
+            else {
+                printf("Writing... %d bytes\r\n", bytes_written);
+                memset(sd_data_buffer.data, '\0', sd_data_buffer.length);
+                sd_data_buffer.length = 0;
+            }
+
+            (void) f_close(&file);
+
+            bufferFilled = false;
+            //printf("Transfer Completed\r\n");
+         }
+
     }
 }
 
