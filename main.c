@@ -758,41 +758,62 @@ void bsp_event_handler(bsp_event_t event)
  *          'new line' '\n' (hex 0x0A) or if the string has reached the maximum data length.
  */
 /**@snippet [Handling the data received over UART] */
+static int noteFlag = 0; //Var that controls MIDI-DIN reception.
 void uart_event_handle(app_uart_evt_t * p_event)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
     static uint8_t index = 0;
     uint32_t       err_code;
+    uint8_t eventUART = 0x00;
+    uint8_t vel;
 
     switch (p_event->evt_type)
     {
-        case APP_UART_DATA_READY:
-            UNUSED_VARIABLE(app_uart_get(&data_array[index]));
-            index++;
-
-            if ((data_array[index - 1] == '\n') ||
-                (data_array[index - 1] == '\r') ||
-                (index >= m_ble_nus_max_data_len))
+        case APP_UART_DATA_READY:  
+            while(app_uart_get(&eventUART) != NRF_SUCCESS); //Pull a byte off the FIFO
+            if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
+              noteFlag = 1;
+              bsp_board_led_invert(2);
+            }
+            else if(noteFlag == 1 && (eventUART < 128) && (eventUART >= 0)) //Note info
             {
-                if (index > 1)
-                {
-                    NRF_LOG_DEBUG("Ready to send data over BLE NUS");
-                    NRF_LOG_HEXDUMP_DEBUG(data_array, index);
+              noteFlag = 2;
+              bsp_board_led_invert(1);
+            }
+            else if(noteFlag == 2) //Velocity info
+            {
+              noteFlag = 0;
+            }
+            else
+            {
+              //UNUSED_VARIABLE(app_uart_get(&data_array[index]));
+              data_array[index] = eventUART; //Give the data back to BLE if it was not a MIDI event.
+              index++;
 
-                    do
-                    {
-                        uint16_t length = (uint16_t)index;
-                        err_code = ble_nus_data_send(&m_nus, data_array, &length, m_conn_handle);
-                        if ((err_code != NRF_ERROR_INVALID_STATE) &&
-                            (err_code != NRF_ERROR_RESOURCES) &&
-                            (err_code != NRF_ERROR_NOT_FOUND))
-                        {
-                            APP_ERROR_CHECK(err_code);
-                        }
-                    } while (err_code == NRF_ERROR_RESOURCES);
-                }
+              if ((data_array[index - 1] == '\n') ||
+                  (data_array[index - 1] == '\r') ||
+                  (index >= m_ble_nus_max_data_len))
+              {
+                  if (index > 1)
+                  {
+                      //NRF_LOG_DEBUG("Ready to send data over BLE NUS");
+                      //NRF_LOG_HEXDUMP_DEBUG(data_array, index);
 
-                index = 0;
+                      do
+                      {
+                          uint16_t length = (uint16_t)index;
+                          err_code = ble_nus_data_send(&m_nus, data_array, &length, m_conn_handle);
+                          if ((err_code != NRF_ERROR_INVALID_STATE) &&
+                              (err_code != NRF_ERROR_RESOURCES) &&
+                              (err_code != NRF_ERROR_NOT_FOUND))
+                          {
+                              APP_ERROR_CHECK(err_code);
+                          }
+                      } while (err_code == NRF_ERROR_RESOURCES);
+                  }
+
+                  index = 0;
+              }
             }
             break;
 
@@ -826,9 +847,9 @@ static void uart_init(void)
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
         .use_parity   = false,
 #if defined (UART_PRESENT)
-        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200
+        .baud_rate    = NRF_UART_BAUDRATE_31250
 #else
-        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud115200
+        .baud_rate    = NRF_UART_BAUDRATE_31250
 #endif
     };
 
@@ -931,12 +952,31 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
+//Temporarily suspend external UART RX by changing its RX pin.
+void suspendUARTRX(int fakePin) {
+  noteFlag = 3;
+  nrf_delay_ms(1);
+  NRF_UART0 -> PSELRXD = fakePin;
+}
+
+
+//Re-enable UART RX after suspending it by changing the RX pin back.
+void resumeUARTRX() {
+  //NRF_UART0 -> TASKS_SUSPEND;
+  NRF_UART0 -> PSELRXD = RX_PIN_NUMBER;
+  nrf_delay_ms(1);
+  noteFlag = 0;
+}
 
 /**@brief Application main function.
  */
 int main(void)
 {
     bool erase_bonds;
+
+    //Init fake UART
+    int fakePin = 5;
+    NRF_GPIO -> PIN_CNF[fakePin] = NRF_GPIO -> PIN_CNF[fakePin] | NRF_GPIO_PIN_PULLUP;
 
     // Initialize BLE.
     uart_init();
@@ -969,6 +1009,21 @@ int main(void)
 
     // LEDs
     initialize_led_strip(288, 25);
+
+    /*
+    int s = 0;
+    while (true){
+        idle_state_handle();
+
+        //Disable external UART for 5 seconds after start.
+        if(s == 0) {
+          suspendUARTRX(fakePin);
+          nrf_delay_ms(5000);
+          resumeUARTRX();
+          s++;
+        }
+    }
+    */
 
 
     // Enter main loop.
@@ -1032,6 +1087,59 @@ int main(void)
 
     }
 }
+
+/* OLD UART HANDLER
+void uart_event_handle(app_uart_evt_t * p_event)
+{
+    static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
+    static uint8_t index = 0;
+    uint32_t       err_code;
+
+    switch (p_event->evt_type)
+    {
+        case APP_UART_DATA_READY:
+            UNUSED_VARIABLE(app_uart_get(&data_array[index]));
+            index++;
+
+            if ((data_array[index - 1] == '\n') ||
+                (data_array[index - 1] == '\r') ||
+                (index >= m_ble_nus_max_data_len))
+            {
+                if (index > 1)
+                {
+                    NRF_LOG_DEBUG("Ready to send data over BLE NUS");
+                    NRF_LOG_HEXDUMP_DEBUG(data_array, index);
+
+                    do
+                    {
+                        uint16_t length = (uint16_t)index;
+                        err_code = ble_nus_data_send(&m_nus, data_array, &length, m_conn_handle);
+                        if ((err_code != NRF_ERROR_INVALID_STATE) &&
+                            (err_code != NRF_ERROR_RESOURCES) &&
+                            (err_code != NRF_ERROR_NOT_FOUND))
+                        {
+                            APP_ERROR_CHECK(err_code);
+                        }
+                    } while (err_code == NRF_ERROR_RESOURCES);
+                }
+
+                index = 0;
+            }
+            break;
+
+        case APP_UART_COMMUNICATION_ERROR:
+            APP_ERROR_HANDLER(p_event->data.error_communication);
+            break;
+
+        case APP_UART_FIFO_ERROR:
+            APP_ERROR_HANDLER(p_event->data.error_code);
+            break;
+
+        default:
+            break;
+    }
+}
+*/
 
 
 /**
