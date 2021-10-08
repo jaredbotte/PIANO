@@ -11,6 +11,7 @@ int current_led;
 uint32_t* colors;
 uint16_t* bufferA;
 uint16_t* bufferB;
+Key* key_array;
 
 void PWM0_IRQHandler(){
     // This handles the DMA transfer complete interrupts.
@@ -87,6 +88,15 @@ static void setup_led_pwm_dma(){
     NRF_PWM0 -> INTENSET = PWM_INTENSET_SEQEND1_Enabled << PWM_INTENSET_SEQEND1_Pos;
 }
 
+static void setup_key_array(int num_keys){
+    int key_led = 0;
+    int width = 2; // For now we'll make each key two LEDs wide. 
+    for(int k = 0; k < num_keys; k++){
+        key_array[k] = (Key) {.starting_led = key_led, .num_led = width};
+        key_led += width;
+    }
+}
+
 void update_led_strip(){
     while(update_finished == 0){
         __asm__("nop");
@@ -107,7 +117,19 @@ void set_led(int led_num, Color color){
     colors[led_num] = col;
 }
 
+void set_key(int key_num, int stat, Color color){
+    Key current_key = key_array[key_num];
+    if(stat == 0){
+        color = (Color) {.red = 0, .green = 0, .blue = 0};
+    }
+    for(int i = 0; i < current_key.num_led; i++){
+        set_led(current_key.starting_led + i, color);
+    }
+    update_led_strip();
+}
+
 void initialize_led_strip(int num, int pin){
+    int num_keys = 88; // Todo take this in as an argument
     num_leds = num;
     led_pin = pin;
     update_finished = 1;
@@ -115,6 +137,8 @@ void initialize_led_strip(int num, int pin){
     bufferA = malloc(sizeof(uint16_t) * 24);
     bufferB = malloc(sizeof(uint16_t) * 24);
     colors = malloc(sizeof(*colors) * num_leds);
+    key_array = malloc(sizeof(*key_array) * num_keys);
+    setup_key_array(num_keys);
     setup_led_pwm_dma();
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
     fill_color((Color) {.red=0, .green=0, .blue=0});
