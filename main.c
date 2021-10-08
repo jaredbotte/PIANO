@@ -6,7 +6,7 @@
 #include "nrf_delay.h"
 
 int main(void) {   
-    initialize_led_strip(144, 17);
+    initialize_led_strip(144, 25);
 
     while (true){
         //main loop
@@ -16,7 +16,7 @@ int main(void) {
         Color light_blue = {.red = 0, .green = 63, .blue = 63};
         Color blue = {.red = 0, .green = 0, .blue = 63};
         Color purple = {.red = 63, .green = 0, .blue = 63};
-        /*nrf_delay_ms(1000);
+        nrf_delay_ms(1000);
         fill_color(red);
         nrf_delay_ms(1000);
         fill_color(yellow);
@@ -27,10 +27,7 @@ int main(void) {
         nrf_delay_ms(1000);
         fill_color(blue);
         nrf_delay_ms(1000);
-        fill_color(purple);*/
-        set_led(2, red);
-        set_led(4, green);
-        set_led(6, blue);
+        fill_color(purple);
     }
 }
 

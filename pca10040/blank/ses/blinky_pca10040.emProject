@@ -64,7 +64,6 @@
       <file file_name="../../../main.c" />
       <file file_name="../config/sdk_config.h" />
       <file file_name="leds.c" />
-      <file file_name="low_level_led.s" />
     </folder>
     <folder Name="None">
       <file file_name="../../../../../../modules/nrfx/mdk/ses_startup_nrf52.s" />
