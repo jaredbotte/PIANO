@@ -1,3 +1,4 @@
 *.emSession
 **/Output
 .DS_Store
+pca10040/blank/ses/blinky_pca10040.emSession
