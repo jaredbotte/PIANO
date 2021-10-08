@@ -1,2 +1,3 @@
+*.emSession
 **/Output
 .DS_Store
