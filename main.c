@@ -111,7 +111,6 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
-
 // sdcard code
 //NRF_BLOCK_DEV_SDC_DEFINE(
 //        m_block_dev_sdc,
@@ -759,6 +758,7 @@ void bsp_event_handler(bsp_event_t event)
  */
 /**@snippet [Handling the data received over UART] */
 static int noteFlag = 0; //Var that controls MIDI-DIN reception.
+static int evtType = 0;
 void uart_event_handle(app_uart_evt_t * p_event)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
@@ -773,12 +773,12 @@ void uart_event_handle(app_uart_evt_t * p_event)
             while(app_uart_get(&eventUART) != NRF_SUCCESS); //Pull a byte off the FIFO
             if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
               noteFlag = 1;
-              bsp_board_led_invert(2);
+              evtType = eventUART == 0X90 ? 1 : 0;
             }
             else if(noteFlag == 1 && (eventUART < 128) && (eventUART >= 0)) //Note info
             {
               noteFlag = 2;
-              bsp_board_led_invert(1);
+              //set_key(eventUART-21, evtType, (Color) {.red = 0, .green = 64, .blue=64});
             }
             else if(noteFlag == 2) //Velocity info
             {

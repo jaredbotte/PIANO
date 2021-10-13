@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "leds.h"
 #include "nrf.h"
+#include "nrf_nvic.h"
 
 int num_leds;
 int led_pin;
@@ -26,6 +27,30 @@ void PWM0_IRQHandler(){
     }
     current_led += 1;
 }
+
+// LED strip refresh code here
+
+static void setup_led_refresh(int rate_hz){
+  // This function will update the LEDs at the rate specified by rate_hz
+
+  NRF_TIMER3 -> TASKS_STOP = 1;
+  NRF_TIMER3 -> MODE = TIMER_MODE_MODE_Timer << TIMER_MODE_MODE_Pos;
+  NRF_TIMER3 -> BITMODE = TIMER_BITMODE_BITMODE_24Bit << TIMER_BITMODE_BITMODE_Pos;
+  NRF_TIMER3 -> PRESCALER = 5; //f_timer = 16,000,000 / 2 ^ 5 = 500,000
+  NRF_TIMER3 -> TASKS_CLEAR = 1;
+  NRF_TIMER3 -> CC[0] = 500000 / (rate_hz);
+
+  NRF_TIMER3 -> INTENSET = TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos;
+  NRF_TIMER3 -> SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Enabled << TIMER_SHORTS_COMPARE0_CLEAR_Pos;
+  NVIC -> ISER[0] = 1 << TIMER3_IRQn;
+  NRF_TIMER3 -> TASKS_START = 1;
+}
+
+void TIMER3_IRQHandler(){
+  // refresh the strip
+  update_led_strip();
+}
+
 
 static void fill_buffer(uint16_t* buffer){
     if(current_led >= num_leds){
@@ -122,10 +147,24 @@ void set_key(int key_num, int stat, Color color){
     if(stat == 0){
         color = (Color) {.red = 0, .green = 0, .blue = 0};
     }
-    for(int i = 0; i < current_key.num_led; i++){
-        set_led(current_key.starting_led + i, color);
+    for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
+        set_led(i, color);
     }
     update_led_strip();
+}
+
+
+void fill_test(){
+  Color red = (Color) {.red = 0, .green = 32, .blue = 0};
+  Color blue = (Color) {.red = 0, .green = 0, .blue = 32};
+  for(int n = 0; n < num_leds; n++){
+     if (n % 2 == 0) {
+      set_led(n, red);
+    } else {
+      set_led(n, blue);
+    }
+  }
+  update_led_strip();
 }
 
 void initialize_led_strip(int num, int pin){
@@ -142,4 +181,6 @@ void initialize_led_strip(int num, int pin){
     setup_led_pwm_dma();
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
     fill_color((Color) {.red=0, .green=0, .blue=0});
+    //fill_test();
+    //setup_led_refresh(2);
 }

@@ -56,10 +56,10 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="31" y="28" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="21" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="4" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.h" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="29" y="51" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.c" selected="0" top="33" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="9" y="55" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/sdk_common.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="25" y="32" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="61" y="4" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.h" selected="1" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="53" y="13" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.c" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="low_level_led.s" selected="0" top="15" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="leds" fileDialogDefaultFilter="*.c;*.h" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="/Applications/SEGGER Embedded Studio for ARM 5.60a/source/thumb_crt0.s&#xa;&#xa;/Users/jared/Documents/senior-design/Device/nRF5_SDK_17.0.2_d674dde/modules/nrfx/mdk/ses_startup_nrf52.s&#xa;&#xa;/Users/jared/Documents/senior-design/Device/nRF5_SDK_17.0.2_d674dde/modules/nrfx/mdk/ses_startup_nrf_common.s&#xa;" fileDialogInitialDirectory="//nas01.itap.purdue.edu/puhome/My Documents/nRF5_SDK_17.0.2_d674dde/nRF5_SDK_17.0.2_d674dde/examples/my_projects/PIANO/pca10040/blank/ses" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <ARMCrossStudioWindow activeProject="leds" fileDialogDefaultFilter="*.c;*.h" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="/Applications/SEGGER Embedded Studio for ARM 5.60a/source/thumb_crt0.s&#xa;&#xa;/Users/jared/Documents/senior-design/Device/nRF5_SDK_17.0.2_d674dde/modules/nrfx/mdk/ses_startup_nrf52.s&#xa;&#xa;/Users/jared/Documents/senior-design/Device/nRF5_SDK_17.0.2_d674dde/modules/nrfx/mdk/ses_startup_nrf_common.s&#xa;" fileDialogInitialDirectory="//nas01.itap.purdue.edu/puhome/My Documents/nRF5_SDK_17.0.2_d674dde/nRF5_SDK_17.0.2_d674dde/examples/my_projects/PIANO/pca10040/blank/ses" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>
