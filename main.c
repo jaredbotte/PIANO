@@ -79,7 +79,7 @@
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 #define UART_TX_BUF_SIZE                256                                        /**< UART TX buffer size. */
-#define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
+#define UART_RX_BUF_SIZE                1024                                         /**< UART RX buffer size. */
 
 #define BLE_BUF_SIZE                    256
 
@@ -778,7 +778,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
             else if(noteFlag == 1 && (eventUART < 128) && (eventUART >= 0)) //Note info
             {
               noteFlag = 2;
-              //set_key(eventUART-21, evtType, (Color) {.red = 0, .green = 64, .blue=64});
+              set_key(eventUART-21, evtType, (Color) {.red = 0, .green = 64, .blue=0});
             }
             else if(noteFlag == 2) //Velocity info
             {
@@ -822,7 +822,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
             break;
 
         case APP_UART_FIFO_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_code);
+            //APP_ERROR_HANDLER(p_event->data.error_code);
             break;
 
         default:
@@ -1008,7 +1008,7 @@ int main(void)
     advertising_start();
 
     // LEDs
-    initialize_led_strip(288, 25);
+    initialize_led_strip(144, 25);
 
     /*
     int s = 0;
