@@ -20,28 +20,34 @@ void PWM0_IRQHandler(){
    update_finished = 1;
 }
 
-// LED strip refresh code here
 
-static void setup_led_refresh(int rate_hz){
-  // This function will update the LEDs at the rate specified by rate_hz
-
-  NRF_TIMER3 -> TASKS_STOP = 1;
-  NRF_TIMER3 -> MODE = TIMER_MODE_MODE_Timer << TIMER_MODE_MODE_Pos;
-  NRF_TIMER3 -> BITMODE = TIMER_BITMODE_BITMODE_24Bit << TIMER_BITMODE_BITMODE_Pos;
-  NRF_TIMER3 -> PRESCALER = 5; //f_timer = 16,000,000 / 2 ^ 5 = 500,000
-  NRF_TIMER3 -> TASKS_CLEAR = 1;
-  NRF_TIMER3 -> CC[0] = 500000 / (rate_hz);
-
-  NRF_TIMER3 -> INTENSET = TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos;
-  NRF_TIMER3 -> SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Enabled << TIMER_SHORTS_COMPARE0_CLEAR_Pos;
-  NVIC -> ISER[0] = 1 << TIMER3_IRQn;
-  NRF_TIMER3 -> TASKS_START = 1;
+void start_timer(void)
+{		
+  NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
+  NRF_TIMER3->TASKS_CLEAR = 1;               // clear the task first to be usable for later
+  NRF_TIMER3->PRESCALER = 6;                             //Set prescaler. Higher number gives slower timer. Prescaler = 0 gives 16MHz timer
+  NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_16Bit;		 //Set counter to 16 bit resolution
+  NRF_TIMER3->CC[0] = 25000;                             //Set value for TIMER2 compare register 0
+  NRF_TIMER3->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
+  NVIC_EnableIRQ(TIMER3_IRQn);
+		
+  NRF_TIMER3->TASKS_START = 1;               // Start TIMER2
 }
-
-
-void TIMER3_IRQHandler(){
+		
+void TIMER3_IRQHandler(void)
+{
+/*
+  NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
+  for(int n = 0;n<64;n++){
+    int keyVal = (noteListLower & (1UL << n)) != 0;
+    set_key(n, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
+  }
+  for(int n = 0;n<24;n++){
+    int keyVal = (noteListLower & (1UL << n)) != 0;
+    set_key(n+64, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
+  }*/
+  //bsp_board_led_invert(3);
   update_led_strip();
-  nrf_delay_ms(100);
 }
 
 
@@ -80,9 +86,9 @@ static void setup_key_array(int num_keys){
 }
 
 void update_led_strip(){
-    while(update_finished == 0){
+   /*while(update_finished == 0){
         __asm__("nop");
-    }
+    }*/
     update_finished = 0;
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
 }
@@ -140,6 +146,6 @@ void initialize_led_strip(int num, int pin){
     }
     setup_led_pwm_dma();
     fill_color((Color) {.red=0, .green=0, .blue=0});
+    //start_timer();
     //fill_test();
-    //setup_led_refresh(1);
 }

@@ -37,7 +37,8 @@
 #include "nrf_delay.h" // leds, uart
 #include "app_error.h" //uart
 #include "sd_card.h"
-
+#include "app_util_platform.h"
+#include "nrf_nvic.h"
 
 // BLE
 #if defined (UART_PRESENT)
@@ -79,7 +80,7 @@
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 #define UART_TX_BUF_SIZE                256                                        /**< UART TX buffer size. */
-#define UART_RX_BUF_SIZE                1024                                         /**< UART RX buffer size. */
+#define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
 #define BLE_BUF_SIZE                    256
 
@@ -757,48 +758,53 @@ void bsp_event_handler(bsp_event_t event)
  *          'new line' '\n' (hex 0x0A) or if the string has reached the maximum data length.
  */
 /**@snippet [Handling the data received over UART] */
-int noteFlag = 0; //Var that controls MIDI-DIN reception.
-int evtType = 0;
-uint64_t noteListLower = 1;
-uint32_t noteListUpper = 1;
+static int noteFlag = 0; //Var that controls MIDI-DIN reception.
+static uint8_t lastEvent = 0;
+uint64_t noteListLower = 0;
+uint32_t noteListUpper = 0;
+uint8_t nest;
 void uart_event_handle(app_uart_evt_t * p_event)
 {
+    //app_util_critical_region_enter(&nest);
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
     static uint8_t index = 0;
     uint32_t       err_code;
     uint8_t eventUART = 0x00;
-    uint8_t vel;
 
     switch (p_event->evt_type)
     {
         case APP_UART_DATA_READY:  
             while(app_uart_get(&eventUART) != NRF_SUCCESS); //Pull a byte off the FIFO
             if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
-              noteFlag = 1;
-              evtType = eventUART == 0X90 ? 1 : 0;
+              noteFlag = eventUART == 0x90 ? 1 : 2;
+              lastEvent = eventUART;
               bsp_board_led_invert(2);
             }
-            else if(noteFlag == 1 && (eventUART < 128) && (eventUART >= 0)) //Note info
-            {
-              int note = eventUART - 21;
-              noteFlag = 2;
-              if(note < 64 && evtType) {
-                noteListLower |= 1UL << note;
+            else if(noteFlag == 1 || noteFlag == 2) //Note info && (eventUART < 128) && (eventUART >= 0)
+            {/*
+              if(eventUART < 85) {
+                if(noteFlag == 1) {
+                  noteListLower |= 1UL << eventUART - 21;
               }
-              else if(note < 64 && !evtType) {
-                noteListLower &= ~(1UL << note);
+                else {
+                  noteListLower &= ~(1UL << eventUART - 21);
+                }
               }
-              else if(note >= 64 && evtType) {
-                noteListLower |= 1UL << note-64;
-              }
-              else if(note >= 64 && !evtType) {
-                noteListLower &= ~(1UL << note-64);
-              }
-              //set_key(eventUART-21, evtType, (Color) {.red = 0, .green = 64, .blue=0});
+              else if(eventUART >= 85) {
+                if(noteFlag == 1) {
+                  noteListUpper |= 1UL << eventUART - 85;
+                }
+                else {
+                  noteListUpper &= ~(1UL << eventUART - 85);
+                }
+              }*/
+              int s = noteFlag == 1 ? 1:0;
+              set_key(eventUART-21, s, (Color) {.red = 0, .green = 24, .blue=0});
               update_led_strip();
+              noteFlag = 3;
               bsp_board_led_invert(1);
             }
-            else if(noteFlag == 2) //Velocity info
+            else if(noteFlag == 3) //Velocity info
             {
               noteFlag = 0;
             }
@@ -840,12 +846,13 @@ void uart_event_handle(app_uart_evt_t * p_event)
             break;
 
         case APP_UART_FIFO_ERROR:
-            //APP_ERROR_HANDLER(p_event->data.error_code);
+            APP_ERROR_HANDLER(p_event->data.error_code);
             break;
 
         default:
             break;
     }
+    //app_util_critical_region_exit(nest);
 }
 /**@snippet [Handling the data received over UART] */
 
@@ -972,7 +979,7 @@ static void advertising_start(void)
 
 //Temporarily suspend external UART RX by changing its RX pin.
 void suspendUARTRX(int fakePin) {
-  noteFlag = 3;
+  noteFlag = 10;
   nrf_delay_ms(1);
   NRF_UART0 -> PSELRXD = fakePin;
 }
@@ -992,13 +999,14 @@ int main(void)
 {
     bool erase_bonds;
 
+    //sd_nvic_SetPriority(UARTE0_UART0_IRQn,2);
+
     //Init fake UART
     int fakePin = 5;
     NRF_GPIO -> PIN_CNF[fakePin] = NRF_GPIO -> PIN_CNF[fakePin] | NRF_GPIO_PIN_PULLUP;
 
     // Initialize BLE.
     uart_init();
-    //log_init();
     timers_init();
     buttons_leds_init(&erase_bonds);
     power_management_init();
@@ -1015,33 +1023,19 @@ int main(void)
 
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     //NRF_LOG_DEFAULT_BACKENDS_INIT();
-    NRF_LOG_INFO("FATFS example started.");
+    //NRF_LOG_INFO("FATFS example started.");
 
     // run fatfs example
     //fatfs_example();
 
     // Start execution.
-    printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started.");
+    //printf("\r\nUART started.\r\n");
+    //NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
 
     // LEDs
     initialize_led_strip(144, 25);
-
-
-    while (true){
-        //idle_state_handle();
-        for(int n = 0;n<64;n++){
-          int keyVal = (noteListLower & (1UL << n)) != 0;
-          set_key(n, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
-        }
-        for(int n = 0;n<24;n++){
-          int keyVal = (noteListLower & (1UL << n)) != 0;
-          set_key(n+64, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
-        }
-    }
-
-
+/*
     // Enter main loop.
     for (;;)
     {
@@ -1102,6 +1096,7 @@ int main(void)
          }
 
     }
+    */
 }
 
 /* OLD UART HANDLER
