@@ -25,9 +25,9 @@ void start_timer(void)
 {		
   NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
   NRF_TIMER3->TASKS_CLEAR = 1;               // clear the task first to be usable for later
-  NRF_TIMER3->PRESCALER = 6;                             //Set prescaler. Higher number gives slower timer. Prescaler = 0 gives 16MHz timer
+  NRF_TIMER3->PRESCALER = 2;                             //Set prescaler. Higher number gives slower timer. Prescaler = 0 gives 16MHz timer
   NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_16Bit;		 //Set counter to 16 bit resolution
-  NRF_TIMER3->CC[0] = 25000;                             //Set value for TIMER2 compare register 0
+  NRF_TIMER3->CC[0] = 10000;                             //Set value for TIMER2 compare register 0????????? DOES THIS WORK????
   NRF_TIMER3->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
   NVIC_EnableIRQ(TIMER3_IRQn);
 		
@@ -36,8 +36,9 @@ void start_timer(void)
 		
 void TIMER3_IRQHandler(void)
 {
-/*
+
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
+  /*
   for(int n = 0;n<64;n++){
     int keyVal = (noteListLower & (1UL << n)) != 0;
     set_key(n, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
@@ -46,7 +47,7 @@ void TIMER3_IRQHandler(void)
     int keyVal = (noteListLower & (1UL << n)) != 0;
     set_key(n+64, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
   }*/
-  //bsp_board_led_invert(3);
+  bsp_board_led_invert(3);
   update_led_strip();
 }
 
@@ -146,6 +147,6 @@ void initialize_led_strip(int num, int pin){
     }
     setup_led_pwm_dma();
     fill_color((Color) {.red=0, .green=0, .blue=0});
-    //start_timer();
+    start_timer();
     //fill_test();
 }

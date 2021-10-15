@@ -778,7 +778,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
             if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
               noteFlag = eventUART == 0x90 ? 1 : 2;
               lastEvent = eventUART;
-              bsp_board_led_invert(2);
+              //bsp_board_led_invert(2);
             }
             else if(noteFlag == 1 || noteFlag == 2) //Note info && (eventUART < 128) && (eventUART >= 0)
             {/*
@@ -800,9 +800,9 @@ void uart_event_handle(app_uart_evt_t * p_event)
               }*/
               int s = noteFlag == 1 ? 1:0;
               set_key(eventUART-21, s, (Color) {.red = 0, .green = 24, .blue=0});
-              update_led_strip();
+              //update_led_strip();
               noteFlag = 3;
-              bsp_board_led_invert(1);
+              //bsp_board_led_invert(1);
             }
             else if(noteFlag == 3) //Velocity info
             {
