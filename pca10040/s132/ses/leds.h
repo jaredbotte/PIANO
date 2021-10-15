@@ -2,6 +2,12 @@
 #define __LEDS_H__
 #include <stdint.h>
 
+#define BRIGHTNESS 24.0 / 255.0
+#define OFF (Color) {.red = 0, .green = 0, .blue = 0}
+#define GREEN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 0}
+#define ORANGE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 0}
+#define RED (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 0}
+
 typedef struct _Color {
     uint8_t red;
     uint8_t green;
@@ -28,5 +34,6 @@ void fill_color(Color color);
 void fill_test();
 void set_led(int led_num, Color color);
 void set_key(int key_num, int stat, Color color);
+void set_key_velocity(int key_num, int stat, int velocity);
 
 #endif // __LEDS_H__

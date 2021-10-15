@@ -760,9 +760,9 @@ void bsp_event_handler(bsp_event_t event)
 /**@snippet [Handling the data received over UART] */
 static int noteFlag = 0; //Var that controls MIDI-DIN reception.
 static uint8_t lastEvent = 0;
-uint64_t noteListLower = 0;
-uint32_t noteListUpper = 0;
-uint8_t nest;
+uint8_t keyNum = 0x00;
+//uint64_t noteListLower = 0;
+//uint32_t noteListUpper = 0;
 void uart_event_handle(app_uart_evt_t * p_event)
 {
     //app_util_critical_region_enter(&nest);
@@ -776,36 +776,22 @@ void uart_event_handle(app_uart_evt_t * p_event)
         case APP_UART_DATA_READY:  
             while(app_uart_get(&eventUART) != NRF_SUCCESS); //Pull a byte off the FIFO
             if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
-              noteFlag = eventUART == 0x90 ? 1 : 2;
+              //noteFlag = eventUART == 0x90 ? 1 : 2;
+              noteFlag = 1;
               lastEvent = eventUART;
               //bsp_board_led_invert(2);
             }
-            else if(noteFlag == 1 || noteFlag == 2) //Note info && (eventUART < 128) && (eventUART >= 0)
-            {/*
-              if(eventUART < 85) {
-                if(noteFlag == 1) {
-                  noteListLower |= 1UL << eventUART - 21;
-              }
-                else {
-                  noteListLower &= ~(1UL << eventUART - 21);
-                }
-              }
-              else if(eventUART >= 85) {
-                if(noteFlag == 1) {
-                  noteListUpper |= 1UL << eventUART - 85;
-                }
-                else {
-                  noteListUpper &= ~(1UL << eventUART - 85);
-                }
-              }*/
-              int s = noteFlag == 1 ? 1:0;
-              set_key(eventUART-21, s, (Color) {.red = 0, .green = 24, .blue=0});
-              //update_led_strip();
-              noteFlag = 3;
-              //bsp_board_led_invert(1);
-            }
-            else if(noteFlag == 3) //Velocity info
+            else if(noteFlag == 1) //Note info && (eventUART < 128) && (eventUART >= 0)
             {
+              keyNum = eventUART - 21;
+              noteFlag = 2;
+            }
+            else if(noteFlag == 2) //Velocity info
+            {
+              int type = lastEvent == 0x90 ? 1 : 0; 
+              set_key(keyNum, type, GREEN);
+              //set_key_velocity(keyNum, type, eventUART);
+              //eventUART is now the velocity.
               noteFlag = 0;
             }
             else

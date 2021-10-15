@@ -7,9 +7,6 @@
 
 int num_leds;
 int led_pin;
-int update_finished;
-extern uint64_t noteListLower;
-extern uint32_t noteListUpper;
 uint16_t* buffer;
 Key* key_array;
 
@@ -17,7 +14,6 @@ void PWM0_IRQHandler(){
     // This handles the DMA transfer complete interrupts.
    NRF_PWM0 -> EVENTS_SEQEND[0] = 0; // Reset the interrupt
    while(NRF_PWM0 -> EVENTS_SEQEND[0]); // Wait for the interrupt to be cleared
-   update_finished = 1;
 }
 
 
@@ -36,18 +32,7 @@ void start_timer(void)
 		
 void TIMER3_IRQHandler(void)
 {
-
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
-  /*
-  for(int n = 0;n<64;n++){
-    int keyVal = (noteListLower & (1UL << n)) != 0;
-    set_key(n, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
-  }
-  for(int n = 0;n<24;n++){
-    int keyVal = (noteListLower & (1UL << n)) != 0;
-    set_key(n+64, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
-  }*/
-  bsp_board_led_invert(3);
   update_led_strip();
 }
 
@@ -79,7 +64,7 @@ static void setup_led_pwm_dma(){
 
 static void setup_key_array(int num_keys){
     int key_led = 0;
-    int width = 2; // For now we'll make each key two LEDs wide. 
+    int width = 2; // For now we'll make each key two LEDs wide. Actually pretty darn close!
     for(int k = 0; k < num_keys; k++){
         key_array[k] = (Key) {.starting_led = key_led, .num_led = width};
         key_led += width;
@@ -87,10 +72,6 @@ static void setup_key_array(int num_keys){
 }
 
 void update_led_strip(){
-   /*while(update_finished == 0){
-        __asm__("nop");
-    }*/
-    update_finished = 0;
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
 }
 
@@ -98,7 +79,6 @@ void fill_color(Color color){
     for(int n = 0; n < num_leds; n++){
         set_led(n, color);
     }
-    update_led_strip();
 }
 
 void set_led(int led_num, Color color){
@@ -117,7 +97,24 @@ void set_key(int key_num, int stat, Color color){
     for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
         set_led(i, color);
     }
-    //update_led_strip();
+}
+
+void set_key_velocity(int key_num, int stat, int velocity){
+    Key current_key = key_array[key_num];
+    Color color = (Color) {.red = 0, .green = 63, .blue = 0};
+    if(stat == 0) {
+        color = OFF;
+    } else if (velocity > 127.0 * 0.6) {
+        color = RED;
+    } else if (velocity > 127.0 * 0.3) {
+        color = ORANGE;
+    } else {
+        color = GREEN;
+    }
+
+    for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
+        set_led(i, color);
+    }
 }
 
 
@@ -131,14 +128,12 @@ void fill_test(){
       set_led(n, blue);
     }
   }
-  //update_led_strip();
 }
 
 void initialize_led_strip(int num, int pin){
     int num_keys = 88; // Todo take this in as an argument
     num_leds = num;
     led_pin = pin;
-    update_finished = 1;
     buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
     key_array = malloc(sizeof(*key_array) * num_keys);
     setup_key_array(num_keys);
