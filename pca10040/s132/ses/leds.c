@@ -3,10 +3,13 @@
 #include <stdlib.h>
 #include "leds.h"
 #include "nrf.h"
+#include "nrf_delay.h" // leds, uart
 
 int num_leds;
 int led_pin;
 int update_finished;
+extern uint64_t noteListLower;
+extern uint32_t noteListUpper;
 uint16_t* buffer;
 Key* key_array;
 
@@ -35,9 +38,10 @@ static void setup_led_refresh(int rate_hz){
   NRF_TIMER3 -> TASKS_START = 1;
 }
 
+
 void TIMER3_IRQHandler(){
-  // refresh the strip
   update_led_strip();
+  nrf_delay_ms(100);
 }
 
 
@@ -106,7 +110,7 @@ void set_key(int key_num, int stat, Color color){
     for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
         set_led(i, color);
     }
-    update_led_strip();
+    //update_led_strip();
 }
 
 
@@ -120,7 +124,7 @@ void fill_test(){
       set_led(n, blue);
     }
   }
-  update_led_strip();
+  //update_led_strip();
 }
 
 void initialize_led_strip(int num, int pin){
@@ -137,5 +141,5 @@ void initialize_led_strip(int num, int pin){
     setup_led_pwm_dma();
     fill_color((Color) {.red=0, .green=0, .blue=0});
     //fill_test();
-    //setup_led_refresh(2);
+    //setup_led_refresh(1);
 }

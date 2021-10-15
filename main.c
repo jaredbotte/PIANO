@@ -757,8 +757,10 @@ void bsp_event_handler(bsp_event_t event)
  *          'new line' '\n' (hex 0x0A) or if the string has reached the maximum data length.
  */
 /**@snippet [Handling the data received over UART] */
-static int noteFlag = 0; //Var that controls MIDI-DIN reception.
-static int evtType = 0;
+int noteFlag = 0; //Var that controls MIDI-DIN reception.
+int evtType = 0;
+uint64_t noteListLower = 1;
+uint32_t noteListUpper = 1;
 void uart_event_handle(app_uart_evt_t * p_event)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
@@ -774,11 +776,27 @@ void uart_event_handle(app_uart_evt_t * p_event)
             if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
               noteFlag = 1;
               evtType = eventUART == 0X90 ? 1 : 0;
+              bsp_board_led_invert(2);
             }
             else if(noteFlag == 1 && (eventUART < 128) && (eventUART >= 0)) //Note info
             {
+              int note = eventUART - 21;
               noteFlag = 2;
-              set_key(eventUART-21, evtType, (Color) {.red = 0, .green = 64, .blue=0});
+              if(note < 64 && evtType) {
+                noteListLower |= 1UL << note;
+              }
+              else if(note < 64 && !evtType) {
+                noteListLower &= ~(1UL << note);
+              }
+              else if(note >= 64 && evtType) {
+                noteListLower |= 1UL << note-64;
+              }
+              else if(note >= 64 && !evtType) {
+                noteListLower &= ~(1UL << note-64);
+              }
+              //set_key(eventUART-21, evtType, (Color) {.red = 0, .green = 64, .blue=0});
+              update_led_strip();
+              bsp_board_led_invert(1);
             }
             else if(noteFlag == 2) //Velocity info
             {
@@ -1010,20 +1028,18 @@ int main(void)
     // LEDs
     initialize_led_strip(144, 25);
 
-    /*
-    int s = 0;
-    while (true){
-        idle_state_handle();
 
-        //Disable external UART for 5 seconds after start.
-        if(s == 0) {
-          suspendUARTRX(fakePin);
-          nrf_delay_ms(5000);
-          resumeUARTRX();
-          s++;
+    while (true){
+        //idle_state_handle();
+        for(int n = 0;n<64;n++){
+          int keyVal = (noteListLower & (1UL << n)) != 0;
+          set_key(n, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
+        }
+        for(int n = 0;n<24;n++){
+          int keyVal = (noteListLower & (1UL << n)) != 0;
+          set_key(n+64, keyVal, (Color) {.red = 0, .green = 64, .blue=0});
         }
     }
-    */
 
 
     // Enter main loop.
