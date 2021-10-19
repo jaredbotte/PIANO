@@ -37,8 +37,8 @@
 #include "nrf_delay.h" // leds, uart
 #include "app_error.h" //uart
 #include "sd_card.h"
-#include "app_util_platform.h"
-#include "nrf_nvic.h"
+#include "app_scheduler.h"
+
 
 // BLE
 #if defined (UART_PRESENT)
@@ -84,6 +84,9 @@
 
 #define BLE_BUF_SIZE                    256
 
+#define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
+#define SCHED_QUEUE_SIZE                10
+
 bool colorChanged   = false;
 bool rChanged       = false;
 bool gChanged       = false;
@@ -91,13 +94,30 @@ bool bChanged       = false;
 bool writeEnable    = false;
 Color led_color     = {.red = 0, .green = 0, .blue = 0};
 
-bool fileTransfer   = false;
-bool bufferFilled   = false;
-bool transferStarted = false;
+volatile bool fileTransfer   = false;
+volatile bool bufferFilled   = false;
+volatile bool transferStarted = false;
 char filename[64];
+
+bool bufferBusy = false;
+
+bool bufferLock = false;
+
+int bytes_w;
+int bytes_s;
+bytes_s = 0;
+bytes_w = 0;
+
 
 sd_write_buffer sd_data_buffer = {.length = 0, .data = {0x00}};
 
+int num_received;
+int num_written;
+
+num_received = 0;
+num_written  = 0;
+
+bool transfer_over = false;
 
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
@@ -111,6 +131,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 {
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
+
 
 // sdcard code
 //NRF_BLOCK_DEV_SDC_DEFINE(
@@ -147,7 +168,7 @@ static void fatfs_example()
     NRF_LOG_INFO("Initializing disk 0 (SDC)...");
     for (uint32_t retries = 3; retries && disk_state; --retries)
     {
-        printf("%x\n", disk_state);
+        //printf("%x\n", disk_state);
         disk_state = disk_initialize(0);
     }
     if (disk_state)
@@ -213,11 +234,140 @@ static void fatfs_example()
     ff_result = f_write(&file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_INFO("Write failed\r\n.");
+       printf("Write failed\r\n.");
     }
     else
     {
         NRF_LOG_INFO("%d bytes written.", bytes_written);
+    }
+
+    (void) f_close(&file);
+    return;
+}
+
+void fileWrite(void* p_event_data, uint16_t event_size) {
+    // FRESULT  ff_result;
+    // FIL      file;
+    // uint16_t bytes_written;
+
+    // //fatfs_init();
+    // sd_write_evt* evt = (sd_write_evt*) p_event_data;
+    // printf("Data: %s\r\n", evt->buf.data);
+    // ff_result = f_open(&file, evt->filename, FA_READ | FA_WRITE | FA_OPEN_APPEND);
+    // printf("FFRESULT: %d\r\n", ff_result);
+    // if (ff_result != FR_OK) {
+    //     printf("fread error func\r\n");
+    //     printf("Error type %d\r\n", ff_result);
+    //     return;
+    // }
+
+    // ff_result = f_write(&file, evt->buf.data, evt->buf.length, (UINT*)& bytes_written);
+
+    // if (ff_result != FR_OK) {
+    //     printf("fwrite error func\r\n");
+    //     printf("Error type %d\r\n", ff_result);
+    //     return;
+    // }
+
+    // (void) f_close(&file);
+    //fatfs_example();
+
+    static FATFS fs;
+    static DIR dir;
+    static FILINFO fno;
+    static FIL file;
+
+    uint32_t bytes_written;
+    FRESULT ff_result;
+    DSTATUS disk_state = STA_NOINIT;
+    sd_write_evt* evt = (sd_write_evt*) p_event_data;
+
+    // Initialize FATFS disk I/O interface by providing the block device. 
+    static diskio_blkdev_t drives[] =
+    {
+            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
+    };
+
+    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
+
+    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
+    for (uint32_t retries = 3; retries && disk_state; --retries)
+    {
+        //printf("%x\n", disk_state);
+        disk_state = disk_initialize(0);
+    }
+    if (disk_state)
+ 
+    {
+      
+        printf("Disk initialization failed.\r\t");
+        return;
+    }
+
+    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
+    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
+    NRF_LOG_INFO("Capacity: %d MB", capacity);
+
+    NRF_LOG_INFO("Mounting volume...");
+    ff_result = f_mount(&fs, "", 1);
+    if (ff_result)
+    {
+        NRF_LOG_INFO("Mount failed.");
+        return;
+    }
+
+    NRF_LOG_INFO("\r\n Listing directory: /");
+    ff_result = f_opendir(&dir, "/");
+    if (ff_result)
+    {
+        NRF_LOG_INFO("Directory listing failed!");
+        return;
+    }
+
+    do
+    {
+        ff_result = f_readdir(&dir, &fno);
+        if (ff_result != FR_OK)
+        {
+            NRF_LOG_INFO("Directory read failed.");
+            return;
+        }
+
+        if (fno.fname[0])
+        {
+            if (fno.fattrib & AM_DIR)
+            {
+                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
+            }
+            else
+            {
+                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
+            }
+        }
+    }
+    while (fno.fname[0]);
+    NRF_LOG_RAW_INFO("");
+
+    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
+    ff_result = f_open(&file, evt->filename, FA_READ | FA_WRITE | FA_OPEN_APPEND);
+    if (ff_result != FR_OK)
+    {
+        NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
+        return;
+    }
+
+    ff_result = f_write(&file, evt->buf.data, evt->buf.length, (UINT *) &bytes_written);
+    if (ff_result != FR_OK)
+    {
+       printf("Write failed\r\n.");
+    }
+    else
+    {
+        NRF_LOG_INFO("%d bytes written.", bytes_written);
+        num_written++;
+        bytes_w+=bytes_written;
+
+        printf("%d bytes has been written\r\n", bytes_w);
     }
 
     (void) f_close(&file);
@@ -290,6 +440,7 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
+sd_write_evt sd_evt;
 
 /**@brief Function for handling the data from the Nordic UART Service.
  *
@@ -305,7 +456,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
     if (p_evt->type == BLE_NUS_EVT_RX_DATA)
     {
         uint32_t err_code;
-
+        
         NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
         NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
@@ -314,11 +465,15 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
         for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++) {
             data[i] = p_evt->params.rx_data.p_data[i];
+            sd_evt.buf.data[i] = p_evt->params.rx_data.p_data[i];
         }
         int size = p_evt->params.rx_data.length;
+        sd_evt.buf.length = p_evt->params.rx_data.length;
 
         if (strncmp(&data, "write", 5) == 0){
-            writeEnable = true;
+            //writeEnable = true;
+            sd_evt.filename = "test.txt";
+            app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
         }
 
         if (strncmp(&data, "blue",4) == 0) {
@@ -409,7 +564,15 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         if (strncmp(&data, "EOF",3) == 0) {
             fileTransfer = false;
             transferStarted = false;
-            printf("Transfer Completed\r\n");
+            printf("\r\nTransfer Completed\r\n");
+            transfer_over = true;
+            printf("\r\nNumber of reception: %d\r\n", num_received);
+            printf("Number of write: %d\r\n", num_written);
+            printf("Filename: %s\r\n", filename);
+            printf("strlen of filename: %d\r\n", strlen(filename));
+            printf("strlen of hello: %d\r\n", strlen("hello"));
+            printf("Diff: %d", strcmp(&filename, "100kbfile.txt"));
+            memset(filename,'\0', sizeof(filename));
             return;
         }
         
@@ -422,17 +585,30 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             strncpy(&filename, &data, size);
             transferStarted = true;
             printf("File Name: %s\r\n", filename);
+            printf("Filename size: %d\r\n", strlen(filename));
+            printf("Size: %d\r\n", size);
+            filename[strlen(filename)-1] = '\0';
             return;
         }
 
         if (fileTransfer && transferStarted) {//writing data
-            for (uint32_t i = 0; i < size; i++) {
-                sd_data_buffer.data[i] = data[i];
-            }
-            sd_data_buffer.length = size;
-            bufferFilled = true;
 
-            return;
+            //while (bufferLock){};
+            
+                bufferBusy = true;
+                for (uint32_t i = 0; i < size; i++) {
+                    sd_data_buffer.data[i] = data[i];
+                }
+                sd_data_buffer.length = size;
+                num_received++;
+                bufferFilled = true;
+                bufferBusy   = false;
+                
+                sd_evt.filename = "test.mid";
+                app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
+                
+                return;
+            
         }
 
         
@@ -463,7 +639,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
 }
 /**@snippet [Handling the data received over BLE] */
-
 
 /**@brief Function for initializing services that will be used by the application.
  */
@@ -779,7 +954,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
               //noteFlag = eventUART == 0x90 ? 1 : 2;
               noteFlag = 1;
               lastEvent = eventUART;
-              //bsp_board_led_invert(2);
+              bsp_board_led_invert(2);
             }
             else if(noteFlag == 1) //Note info && (eventUART < 128) && (eventUART >= 0)
             {
@@ -843,6 +1018,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
 /**@snippet [Handling the data received over UART] */
 
 
+
 /**@brief  Function for initializing the UART module.
  */
 /**@snippet [UART Initialization] */
@@ -858,9 +1034,9 @@ static void uart_init(void)
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
         .use_parity   = false,
 #if defined (UART_PRESENT)
-        .baud_rate    = NRF_UART_BAUDRATE_31250
+        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud31250
 #else
-        .baud_rate    = NRF_UART_BAUDRATE_31250
+        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud31250
 #endif
     };
 
@@ -873,6 +1049,23 @@ static void uart_init(void)
     APP_ERROR_CHECK(err_code);
 }
 /**@snippet [UART Initialization] */
+
+
+//Temporarily suspend external UART RX by changing its RX pin.
+void suspendUARTRX(int fakePin) {
+  noteFlag = 10;
+  nrf_delay_ms(1);
+  NRF_UART0 -> PSELRXD = fakePin;
+}
+
+
+//Re-enable UART RX after suspending it by changing the RX pin back.
+void resumeUARTRX() {
+  //NRF_UART0 -> TASKS_SUSPEND;
+  NRF_UART0 -> PSELRXD = RX_PIN_NUMBER;
+  nrf_delay_ms(1);
+  noteFlag = 0;
+}
 
 
 /**@brief Function for initializing the Advertising functionality.
@@ -963,21 +1156,6 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
-//Temporarily suspend external UART RX by changing its RX pin.
-void suspendUARTRX(int fakePin) {
-  noteFlag = 10;
-  nrf_delay_ms(1);
-  NRF_UART0 -> PSELRXD = fakePin;
-}
-
-
-//Re-enable UART RX after suspending it by changing the RX pin back.
-void resumeUARTRX() {
-  //NRF_UART0 -> TASKS_SUSPEND;
-  NRF_UART0 -> PSELRXD = RX_PIN_NUMBER;
-  nrf_delay_ms(1);
-  noteFlag = 0;
-}
 
 /**@brief Application main function.
  */
@@ -985,15 +1163,11 @@ int main(void)
 {
     bool erase_bonds;
 
-    //sd_nvic_SetPriority(UARTE0_UART0_IRQn,2);
-
-    //Init fake UART
-    int fakePin = 5;
-    NRF_GPIO -> PIN_CNF[fakePin] = NRF_GPIO -> PIN_CNF[fakePin] | NRF_GPIO_PIN_PULLUP;
-
     // Initialize BLE.
     uart_init();
+    //log_init();
     timers_init();
+    APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
     buttons_leds_init(&erase_bonds);
     power_management_init();
     ble_stack_init();
@@ -1002,141 +1176,121 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
-    fatfs_init();
+    //fatfs_init();
+    //fatfs_example();
+    
 
     // Initialize FATFS
     bsp_board_init(BSP_INIT_LEDS);
 
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     //NRF_LOG_DEFAULT_BACKENDS_INIT();
-    //NRF_LOG_INFO("FATFS example started.");
+    NRF_LOG_INFO("FATFS example started.");
 
     // run fatfs example
     //fatfs_example();
 
     // Start execution.
-    //printf("\r\nUART started.\r\n");
-    //NRF_LOG_INFO("Debug logging for UART over RTT started.");
+    printf("\r\nUART started.\r\n");
+    NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
 
     // LEDs
     initialize_led_strip(144, 25);
-/*
+
+
     // Enter main loop.
+    
+
     for (;;)
     {
         idle_state_handle();
+        app_sched_execute();
 
-         if (writeEnable) {
-             FRESULT  ff_result;
-             FIL      file;
-             uint16_t bytes_written;
+        //  if (writeEnable) {
+        //      FRESULT  ff_result;
+        //      FIL      file;
+        //      uint16_t bytes_written;
 
-             ff_result = f_open(&file, "Test.txt", FA_READ | FA_WRITE | FA_OPEN_APPEND);
-             if (ff_result != FR_OK) {
-                 printf("fopen failed!!!!!!!!!!!!!!!\r\n");
-                 printf("Error type %d\r\n", ff_result);
-             }
+        //      ff_result = f_open(&file, "Test.txt", FA_READ | FA_WRITE | FA_OPEN_APPEND);
+        //      if (ff_result != FR_OK) {
+        //          printf("fopen failed!!!!!!!!!!!!!!!\r\n");
+        //          printf("Error type %d\r\n", ff_result);
+        //      }
 
-             ff_result = f_write(&file, "Guten Tag", 9, (UINT*)& bytes_written);
+        //      ff_result = f_write(&file, "Guten Tag", 9, (UINT*)& bytes_written);
 
-             if (ff_result != FR_OK) {
-                 printf("fwrite failed!!!!!!!!!!!!!!\r\n");
-                 printf("Error type %d\r\n", ff_result);
-             }
+        //      if (ff_result != FR_OK) {
+        //          printf("fwrite failed!!!!!!!!!!!!!!\r\n");
+        //          printf("Error type %d\r\n", ff_result);
+        //      }
 
-             (void) f_close(&file);
+        //      (void) f_close(&file);
 
-             write_to_file("Hello World!", 12, "Test.txt");
+        //      write_to_file("Hello World!", 12, "Test.txt");
 
-             writeEnable = false;
-         }
+        //      writeEnable = false;
+        //  }
 
-         if (fileTransfer && bufferFilled) {
-            FRESULT  ff_result;
-            FIL      file;
-            uint16_t bytes_written;
+        //  if (fileTransfer && bufferFilled) {
+          
+        //         //bufferLock = true;
+        //         bufferBusy = true;
+        //         FRESULT  ff_result;
+        //         FIL      file;
+        //         uint16_t bytes_written;
 
-            ff_result = f_open(&file, "test.mid", FA_READ | FA_WRITE | FA_OPEN_APPEND);
-            if (ff_result != FR_OK) {
-                printf("fopen failed!!!!!!!!!!!!!!!\r\n");
-                printf("Error type %d\r\n", ff_result);
-            }
+        //         ff_result = f_open(&file, "Test.mid", FA_READ | FA_WRITE | FA_OPEN_APPEND);
+        //         if (ff_result != FR_OK) {
+        //             printf("fopen failed!!!!!!!!!!!!!!!\r\n");
+        //             printf("Error type %d\r\n", ff_result);
+        //         }
 
-            ff_result = f_write(&file, sd_data_buffer.data, sd_data_buffer.length, (UINT*)& bytes_written);
+        //         ff_result = f_write(&file, sd_data_buffer.data, sd_data_buffer.length, (UINT*)& bytes_written);
 
-            if (ff_result != FR_OK) {
-                printf("fwrite failed!!!!!!!!!!!!!!\r\n");
-                printf("Error type %d\r\n", ff_result);
-            }
-            else {
-                printf("Writing... %d bytes\r\n", bytes_written);
-                memset(sd_data_buffer.data, '\0', sd_data_buffer.length);
-                sd_data_buffer.length = 0;
-            }
+        //         if (ff_result != FR_OK) {
+        //             printf("fwrite failed!!!!!!!!!!!!!!\r\n");
+        //             printf("Error type %d\r\n", ff_result);
+        //             return 0;
+        //         }
+        //         else {
+        //             //printf("Writing... %d bytes\r\n", bytes_written);
+        //             bytes_w+=bytes_written;
+        //             num_written++;
+        //             //bytes_s+=128;
 
-            (void) f_close(&file);
+        //             printf("%d bytes has been written\r\n", bytes_w);
+        //             //printf("#");
+                    
+        //             memset(sd_data_buffer.data, '\0', sd_data_buffer.length);
+        //             sd_data_buffer.length = 0;
+        //         }
 
-            bufferFilled = false;
-            //printf("Transfer Completed\r\n");
-         }
+        //         (void) f_close(&file);
+
+        //         bufferFilled = false;
+        //         bufferBusy = false;
+        //         bufferLock = false;
+            
+        //     //printf("Transfer Completed\r\n");
+
+        //     if (transfer_over) {
+        //         filename[strlen(filename)-1] = '\0';
+        //         printf("\r\nNumber of reception: %d\r\n", num_received);
+        //         printf("Number of write: %d\r\n", num_written);
+        //         printf("Filename: %s\r\n", filename);
+        //         printf("strlen of filename: %d\r\n", strlen(filename));
+        //         printf("strlen of hello: %d\r\n", strlen("hello"));
+
+        //         //return 0;
+        //         transfer_over = false;
+        //     }
+        //  }
+
+
 
     }
-    */
 }
-
-/* OLD UART HANDLER
-void uart_event_handle(app_uart_evt_t * p_event)
-{
-    static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    static uint8_t index = 0;
-    uint32_t       err_code;
-
-    switch (p_event->evt_type)
-    {
-        case APP_UART_DATA_READY:
-            UNUSED_VARIABLE(app_uart_get(&data_array[index]));
-            index++;
-
-            if ((data_array[index - 1] == '\n') ||
-                (data_array[index - 1] == '\r') ||
-                (index >= m_ble_nus_max_data_len))
-            {
-                if (index > 1)
-                {
-                    NRF_LOG_DEBUG("Ready to send data over BLE NUS");
-                    NRF_LOG_HEXDUMP_DEBUG(data_array, index);
-
-                    do
-                    {
-                        uint16_t length = (uint16_t)index;
-                        err_code = ble_nus_data_send(&m_nus, data_array, &length, m_conn_handle);
-                        if ((err_code != NRF_ERROR_INVALID_STATE) &&
-                            (err_code != NRF_ERROR_RESOURCES) &&
-                            (err_code != NRF_ERROR_NOT_FOUND))
-                        {
-                            APP_ERROR_CHECK(err_code);
-                        }
-                    } while (err_code == NRF_ERROR_RESOURCES);
-                }
-
-                index = 0;
-            }
-            break;
-
-        case APP_UART_COMMUNICATION_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_communication);
-            break;
-
-        case APP_UART_FIFO_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_code);
-            break;
-
-        default:
-            break;
-    }
-}
-*/
 
 
 /**

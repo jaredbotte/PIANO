@@ -29,6 +29,13 @@ typedef struct _sd_write_buffer {
         char data[SDC_BUFFER_SIZE];
 } sd_write_buffer;
 
+typedef struct _sd_write_evt {
+        sd_write_buffer buf;
+        char* filename;
+}sd_write_evt;
+
+void fileWrite(void* p_event_data, uint16_t event_size);
+
 void fatfs_init ();
 
 void write_to_file (uint8_t* data, int size, char* filename);
