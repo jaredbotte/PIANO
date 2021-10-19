@@ -789,8 +789,8 @@ void uart_event_handle(app_uart_evt_t * p_event)
             else if(noteFlag == 2) //Velocity info
             {
               int type = lastEvent == 0x90 ? 1 : 0; 
-              set_key(keyNum, type, GREEN);
-              //set_key_velocity(keyNum, type, eventUART);
+              //set_key(keyNum, type, GREEN);
+              set_key_velocity(keyNum, type, eventUART);
               //eventUART is now the velocity.
               noteFlag = 0;
             }
