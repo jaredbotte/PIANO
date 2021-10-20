@@ -65,7 +65,7 @@
  <Files>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="99" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="82" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.h" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="27" y="23" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.h" selected="1" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="29" y="9" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.h" selected="1" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="50" y="302" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="280" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="330" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../external/fatfs/port/diskio_blkdev.c" selected="0" top="291" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="29" y="72" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.c" selected="0" top="61" codecName="Default"/>
@@ -87,7 +87,6 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="25" y="567" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer2.c" selected="0" top="559" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="72" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error.c" selected="0" top="58" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="117" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/ble/ble_advertising/ble_advertising.c" selected="0" top="113" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="324" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../../SEGGER Embedded Studio for ARM 5.62/source/thumb_crt0.s" selected="0" top="310" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/ray/Desktop" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/Users/ray/Desktop" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>

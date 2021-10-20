@@ -8,7 +8,7 @@
 #include "nrf_block_dev.h"
 
 #define SDC_MISO_PIN 26 // DO
-#define SDC_SCK_PIN  27 // SDK
+#define SDC_SCK_PIN  27 // SCK
 #define SDC_MOSI_PIN 28 // DI
 #define SDC_CS_PIN   29 // CS
 

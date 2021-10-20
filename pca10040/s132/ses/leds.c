@@ -21,7 +21,7 @@ void start_timer(void)
 {		
   NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
   NRF_TIMER3->TASKS_CLEAR = 1;               // clear the task first to be usable for later
-  NRF_TIMER3->PRESCALER = 2;                             //Set prescaler. Higher number gives slower timer. Prescaler = 0 gives 16MHz timer
+  NRF_TIMER3->PRESCALER = 3;                             //Set prescaler. Higher number gives slower timer. Prescaler = 0 gives 16MHz timer
   NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_16Bit;		 //Set counter to 16 bit resolution
   NRF_TIMER3->CC[0] = 10000;                             //Set value for TIMER2 compare register 0????????? DOES THIS WORK????
   NRF_TIMER3->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
@@ -30,12 +30,6 @@ void start_timer(void)
   NRF_TIMER3->TASKS_START = 1;               // Start TIMER2
 }
 		
-void TIMER3_IRQHandler(void)
-{
-  NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
-  update_led_strip();
-}
-
 
 static void setup_led_pwm_dma(){
     // GPIO setup

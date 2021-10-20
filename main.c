@@ -79,13 +79,13 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define UART_TX_BUF_SIZE                256                                        /**< UART TX buffer size. */
+#define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
 #define BLE_BUF_SIZE                    256
 
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
-#define SCHED_QUEUE_SIZE                10
+#define SCHED_QUEUE_SIZE                50
 
 bool colorChanged   = false;
 bool rChanged       = false;
@@ -131,6 +131,8 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 {
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
+
+sd_write_evt sd_evt;
 
 
 // sdcard code
@@ -244,6 +246,18 @@ static void fatfs_example()
     (void) f_close(&file);
     return;
 }
+
+void led_update (void* p_event_data, uint16_t event_size) {
+  update_led_strip();
+}
+
+void TIMER3_IRQHandler(void)
+{
+  NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
+  //update_led_strip();
+  app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
+}
+
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
     // FRESULT  ff_result;
@@ -440,8 +454,6 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
-sd_write_evt sd_evt;
-
 /**@brief Function for handling the data from the Nordic UART Service.
  *
  * @details This function will process the data received from the Nordic UART BLE Service and send
@@ -569,9 +581,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             printf("\r\nNumber of reception: %d\r\n", num_received);
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
-            printf("strlen of filename: %d\r\n", strlen(filename));
-            printf("strlen of hello: %d\r\n", strlen("hello"));
-            printf("Diff: %d", strcmp(&filename, "100kbfile.txt"));
             memset(filename,'\0', sizeof(filename));
             return;
         }
@@ -1176,7 +1185,8 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
-    //fatfs_init();
+    // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
+    // fatfs_init();
     //fatfs_example();
     
 
@@ -1187,8 +1197,6 @@ int main(void)
     //NRF_LOG_DEFAULT_BACKENDS_INIT();
     NRF_LOG_INFO("FATFS example started.");
 
-    // run fatfs example
-    //fatfs_example();
 
     // Start execution.
     printf("\r\nUART started.\r\n");
