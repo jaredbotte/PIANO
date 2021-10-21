@@ -5,12 +5,25 @@
 #define MIDI_EVENT_LIMIT 10
 
 typedef struct {
-  uint8_t ID;
-  uint8_t note;
-  uint8_t velocity;
+    uint8_t ID;
+    uint8_t note;
+    uint8_t velocity;
 } MidiEvent;
 
+typedef struct {
+    FIL* ptr;
+    uint16_t format;
+    uint16_t numTracks;
+    uint16_t division;
+    int seconds_per_tick;
+} MidiFile;
+
+static MidiFile midi_file;
+
+
 void read_next_midi_data();
-MidiEvent get_next_midi_event();
-unsigned long get_next_midi_delay();
-uint8_t get_next_byte(){
+MidiEvent get_midi_event(uint8_t newid);
+MetaEvent get_meta_event();
+unsigned long get_variable_data();
+uint8_t get_next_byte();
+void init_midi_file(filename);
