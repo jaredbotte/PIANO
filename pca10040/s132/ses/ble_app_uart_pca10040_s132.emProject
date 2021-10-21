@@ -104,6 +104,7 @@
       <file file_name="../config/sdk_config.h" />
       <file file_name="leds.c" />
       <file file_name="sd_card.c" />
+      <file file_name="midifile.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../../../../external/segger_rtt/SEGGER_RTT.c" />
@@ -141,6 +142,7 @@
     <folder Name="Include">
       <file file_name="leds.h" />
       <file file_name="sd_card.h" />
+      <file file_name="midifile.h" />
     </folder>
   </project>
   <configuration

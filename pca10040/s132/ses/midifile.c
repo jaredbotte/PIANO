@@ -2,6 +2,7 @@
 #include "midifile.h"
 
 uint8_t get_next_byte(){
+    // TODO: this function
     return 0;
 }
 
