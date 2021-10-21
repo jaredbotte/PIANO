@@ -1,4 +1,8 @@
 #pragma once
+#include "diskio_blkdev.h"
+#include "nrf_block_dev_sdc.h"
+#include "sd_card.h"
+#include "nrf_log.h"
 #include "ff.h"
 #include "leds.h"
 
@@ -11,20 +15,22 @@ typedef struct {
 } MidiEvent;
 
 typedef struct {
-    FIL* ptr;
+    FIL ptr;
     uint16_t format;
     uint16_t numTracks;
     uint16_t division;
-    int useconds_per_tick;
+    int mseconds_per_tick;
     uint32_t tempo; // uS/qn
+    uint64_t next_track_start;
 } MidiFile;
 
 static MidiFile midi_file;
 
 
-void read_next_midi_data();
+unsigned long read_next_midi_data();
 MidiEvent get_midi_event(uint8_t newid);
-MetaEvent get_meta_event();
+void get_meta_event();
 unsigned long get_variable_data();
 uint8_t get_next_byte();
-void init_midi_file(filename);
+unsigned long init_midi_file(char* filename);
+void start_next_track();

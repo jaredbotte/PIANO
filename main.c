@@ -38,6 +38,7 @@
 #include "app_error.h" //uart
 #include "sd_card.h"
 #include "app_scheduler.h"
+#include "midifile.h"
 
 
 // BLE
@@ -85,7 +86,7 @@
 #define BLE_BUF_SIZE                    256
 
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
-#define SCHED_QUEUE_SIZE                50
+#define SCHED_QUEUE_SIZE                10
 
 bool colorChanged   = false;
 bool rChanged       = false;
@@ -1165,6 +1166,25 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
+void midi_scheduled_event(void* p_event_data, uint16_t event_size){
+    unsigned long next_delay_ms = read_next_midi_data();
+    midi_delay(next_delay_ms); 
+}
+
+static void midi_delay_done_handler(void* p_context){
+    UNUSED_PARAMETER(p_context);
+    app_sched_event_put(&sd_evt, sizeof(sd_evt), midi_scheduled_event);
+}
+
+void midi_delay(unsigned long time_ms){
+    APP_TIMER_DEF(midi_timer);
+    ret_code_t err_code;
+    err_code = app_timer_create(&midi_timer, APP_TIMER_MODE_SINGLE_SHOT, midi_delay_done_handler);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_start(midi_timer, APP_TIMER_TICKS(time_ms), NULL);
+    APP_ERROR_CHECK(err_code);
+}
 
 /**@brief Application main function.
  */
@@ -1206,101 +1226,13 @@ int main(void)
     // LEDs
     initialize_led_strip(144, 25);
 
+    midi_delay(init_midi_file("TEST.MID"));
 
     // Enter main loop.
     
-
     for (;;)
     {
         idle_state_handle();
         app_sched_execute();
-
-        //  if (writeEnable) {
-        //      FRESULT  ff_result;
-        //      FIL      file;
-        //      uint16_t bytes_written;
-
-        //      ff_result = f_open(&file, "Test.txt", FA_READ | FA_WRITE | FA_OPEN_APPEND);
-        //      if (ff_result != FR_OK) {
-        //          printf("fopen failed!!!!!!!!!!!!!!!\r\n");
-        //          printf("Error type %d\r\n", ff_result);
-        //      }
-
-        //      ff_result = f_write(&file, "Guten Tag", 9, (UINT*)& bytes_written);
-
-        //      if (ff_result != FR_OK) {
-        //          printf("fwrite failed!!!!!!!!!!!!!!\r\n");
-        //          printf("Error type %d\r\n", ff_result);
-        //      }
-
-        //      (void) f_close(&file);
-
-        //      write_to_file("Hello World!", 12, "Test.txt");
-
-        //      writeEnable = false;
-        //  }
-
-        //  if (fileTransfer && bufferFilled) {
-          
-        //         //bufferLock = true;
-        //         bufferBusy = true;
-        //         FRESULT  ff_result;
-        //         FIL      file;
-        //         uint16_t bytes_written;
-
-        //         ff_result = f_open(&file, "Test.mid", FA_READ | FA_WRITE | FA_OPEN_APPEND);
-        //         if (ff_result != FR_OK) {
-        //             printf("fopen failed!!!!!!!!!!!!!!!\r\n");
-        //             printf("Error type %d\r\n", ff_result);
-        //         }
-
-        //         ff_result = f_write(&file, sd_data_buffer.data, sd_data_buffer.length, (UINT*)& bytes_written);
-
-        //         if (ff_result != FR_OK) {
-        //             printf("fwrite failed!!!!!!!!!!!!!!\r\n");
-        //             printf("Error type %d\r\n", ff_result);
-        //             return 0;
-        //         }
-        //         else {
-        //             //printf("Writing... %d bytes\r\n", bytes_written);
-        //             bytes_w+=bytes_written;
-        //             num_written++;
-        //             //bytes_s+=128;
-
-        //             printf("%d bytes has been written\r\n", bytes_w);
-        //             //printf("#");
-                    
-        //             memset(sd_data_buffer.data, '\0', sd_data_buffer.length);
-        //             sd_data_buffer.length = 0;
-        //         }
-
-        //         (void) f_close(&file);
-
-        //         bufferFilled = false;
-        //         bufferBusy = false;
-        //         bufferLock = false;
-            
-        //     //printf("Transfer Completed\r\n");
-
-        //     if (transfer_over) {
-        //         filename[strlen(filename)-1] = '\0';
-        //         printf("\r\nNumber of reception: %d\r\n", num_received);
-        //         printf("Number of write: %d\r\n", num_written);
-        //         printf("Filename: %s\r\n", filename);
-        //         printf("strlen of filename: %d\r\n", strlen(filename));
-        //         printf("strlen of hello: %d\r\n", strlen("hello"));
-
-        //         //return 0;
-        //         transfer_over = false;
-        //     }
-        //  }
-
-
-
     }
 }
-
-
-/**
- * @}
- */
