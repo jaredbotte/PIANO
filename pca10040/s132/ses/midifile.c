@@ -21,17 +21,14 @@ void get_meta_event(){
     uint8_t meta_type = get_next_byte();
     unsigned long length = get_variable_data();
     if(meta_type == 0x2F){ // End of track
-        // TODO: Change state of system!
+        asm("nop") // TODO: Change state of system! Song is over.
     } else if (meta_type == 0x51){ // Tempo setting
         // Length should be 3!
         uint8_t tempodat[3] = {0};
         uint8_t br;
         f_read(midi_file.ptr, tempodat, length, &br);
-        // TODO: set tempo!
-    } else if (meta_type == 0x54) { // SMPTE offset
-
-    } else if (meta_type == 0x58) { // Time offset
-
+        midi_file.tempo = (tempodat[0] << 16) | (tempodat[1] << 8) | tempodat[2]; 
+        midi_file.useconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
     } else {
         f_lseek(midi_file.ptr, length);
     }
@@ -52,18 +49,33 @@ unsigned long get_variable_data(){
 
 uint8_t read_next_track_event(){
     uint8_t evt = get_next_byte();
+    if (evt == 0xFF){
+        get_meta_event();
+    } else if (evt == 0xF0){
+        unsigned long len = get_variable_data();
+        f_lseek(midi_file.ptr, len + 1);
+    } else if (evt == 0xF7){
+        unsigned long len = get_variable_data();
+        f_lseek(midi_file.ptr, len);
+    }
+    return evt;
 }
 
-void read_next_midi_data(){
+unsigned long read_next_midi_data(){
     MidiEvent updates[MIDI_EVENT_LIMIT] = {0};
     int events_read = 0;
-    uint16_t delay = 0
+    unsigned long delay = 0;
 
     while(!delay && events_read < MIDI_EVENT_LIMIT) {
-        MidiEvent evt = get_next_midi_event();
-        delay = get_next_midi_delay();
-        updates[events_read] = evt;
-        events_read++;
+        // TODO: grab the first delay and schedule this function
+        // TODO: then, use the returned delay to schedule this function again.
+        uint8_t evt = read_next_track_event();
+        if (evt != 0xFF && evt != 0xF0 && evt != 0xF7) {
+            MidiEvent mevt = get_midi_event(evt);
+            updates[events_read] = evt;
+            events_read++;
+        }
+        delay = get_variable_data();
     }
     // Update leds based on updates
     for(int i = 0; i < MIDI_EVENT_LIMIT; i++){
@@ -75,7 +87,7 @@ void read_next_midi_data(){
         set_key_velocity(curr.note, stat, curr.velocity);
     }
     // NOTE: Do we want to update the LED strip here or keep our constant refresh rate?
-    // TODO: wait delay, then schedule read_next_midi_data
+    return delay;
 }
 
 void init_midi_file(filename){
@@ -89,6 +101,6 @@ void init_midi_file(filename){
     midi_file.format = header[0] << 8 | header[1];
     midi_file.numTracks = header[2] << 8 | header[3];
     midi_file.division = header[4] << 8 | header[5];
-    // NEED seconds/tick!
-    // NOTE: Remove the first delay.
+    midi_file.tempo = 500000; // 120 BPM
+    midi_file.useconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
 }

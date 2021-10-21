@@ -15,7 +15,8 @@ typedef struct {
     uint16_t format;
     uint16_t numTracks;
     uint16_t division;
-    int seconds_per_tick;
+    int useconds_per_tick;
+    uint32_t tempo; // uS/qn
 } MidiFile;
 
 static MidiFile midi_file;
