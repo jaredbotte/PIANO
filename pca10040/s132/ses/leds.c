@@ -124,8 +124,7 @@ void fill_test(){
   }
 }
 
-void initialize_led_strip(int num, int pin){
-    int num_keys = 88; // Todo take this in as an argument
+void initialize_led_strip(int num, int pin, int num_keys){
     num_leds = num;
     led_pin = pin;
     buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);

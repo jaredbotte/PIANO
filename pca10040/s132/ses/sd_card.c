@@ -86,30 +86,3 @@ void write_to_file (uint8_t* data, int size, char* filename) {
 
     (void) f_close(&file);
 }
-
-// void fileWrite(void* p_event_data, uint16_t event_size) {
-//     FRESULT  ff_result;
-//     FIL      file;
-//     uint16_t bytes_written;
-
-//     //fatfs_init();
-//     sd_write_evt* evt = (sd_write_evt*) p_event_data;
-
-//     ff_result = f_open(&file, evt->filename, FA_READ | FA_WRITE | FA_OPEN_APPEND);
-//     printf("FFRESULT: %d\r\n", ff_result);
-//     if (ff_result != FR_OK) {
-//         printf("fread error func\r\n");
-//         printf("Error type %d\r\n", ff_result);
-//         return;
-//     }
-
-//     ff_result = f_write(&file, evt->buf.data, evt->buf.length, (UINT*)& bytes_written);
-
-//     if (ff_result != FR_OK) {
-//         printf("fwrite error func\r\n");
-//         printf("Error type %d\r\n", ff_result);
-//         return;
-//     }
-
-//     (void) f_close(&file);
-// }

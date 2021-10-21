@@ -28,7 +28,7 @@ static void fill_buffer_color(uint16_t* buffer, uint32_t curr_col);
 static void fill_buffer_reset(uint16_t* buffer);
 
 // Interfacing functions
-void initialize_led_strip(int num, int pin);
+void initialize_led_strip(int num, int pin, int num_keys);
 void update_led_strip();
 void fill_color(Color color);
 void fill_test();

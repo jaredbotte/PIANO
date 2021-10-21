@@ -12,7 +12,7 @@
 #define SDC_MOSI_PIN 28 // DI
 #define SDC_CS_PIN   29 // CS
 
-#define SDC_BUFFER_SIZE 512
+#define SDC_BUFFER_SIZE 200
 
 
 NRF_BLOCK_DEV_SDC_DEFINE(
