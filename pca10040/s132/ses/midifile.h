@@ -7,6 +7,7 @@
 #include "leds.h"
 
 #define MIDI_EVENT_LIMIT 10
+#define TEMP_DIV 1
 
 typedef struct {
     uint8_t ID;
@@ -21,14 +22,13 @@ typedef struct {
     uint16_t division;
     int mseconds_per_tick;
     uint32_t tempo; // uS/qn
-    uint64_t next_track_start;
 } MidiFile;
 
 static MidiFile midi_file;
 
 
 unsigned long read_next_midi_data();
-MidiEvent get_midi_event(uint8_t newid);
+MidiEvent get_midi_event(const uint8_t stat);
 void get_meta_event();
 unsigned long get_variable_data();
 uint8_t get_next_byte();

@@ -10,33 +10,46 @@ uint8_t get_next_byte(){
     return byte;
 }
 
-MidiEvent get_midi_event(uint8_t newid){
+MidiEvent get_midi_event(const uint8_t stat){
+    // NOTE: For whatever reason, stat is being overwritten here
+    // NOTE: This is a MAJOR ISSUE!
+    // NOTE: Also, the "MidiEvent m = " line does not ever get run...
     uint8_t note_info[2] = {0};
-    UINT br = 0;
+    UINT br;
     FRESULT res = f_read(&midi_file.ptr, note_info, 2, &br);
     uint8_t newnote = note_info[0];
     uint8_t vel = note_info[1];
-    printf("Creating MIDI Event with note %d, ID %d, and velocity %d\r\n", newnote, newid, vel);
-    return (MidiEvent) {.ID = newid, .note=newnote, .velocity=vel};
+    //printf("Creating MIDI Event with note %d, ID %d, and velocity %d\r\n", newnote, *wtf, vel);
+    MidiEvent m = (MidiEvent) {.ID = stat, .note=newnote, .velocity=vel};
+    return m;
 }
 
 void get_meta_event(){
     uint8_t meta_type = get_next_byte();
     unsigned long length = get_variable_data();
     if(meta_type == 0x2F){ // End of track
-        // TODO: Change state of system! Song is over.
+        if (f_tell(&midi_file.ptr) + 1 == f_size(&midi_file.ptr)){
+            printf("EOF");
+            while(true); // TODO: Obviously, fix this line.
+        }
+        start_next_track();
     } else if (meta_type == 0x51){ // Tempo setting
+        //printf("tempo!\r\n");
         // Length should be 3!
         uint8_t tempodat[3] = {0};
         UINT br;
         f_read(&midi_file.ptr, tempodat, length, &br);
         midi_file.tempo = (tempodat[0] << 16) | (tempodat[1] << 8) | tempodat[2]; 
+        midi_file.tempo /= TEMP_DIV;
         midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
     } else {
-        printf("Found meta event %X\r\n", meta_type);
-        FRESULT res = f_lseek(&midi_file.ptr, length);
-        printf("Seek result %d\r\n", res);
+        printf("skipping meta event %X with length %X\r\n", meta_type, length);
+        FRESULT res = f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + length);
+        if(res != FR_OK){
+            printf("NOPE NOPE NOPE NOPE NOPE");
+        }
     }
+    printf("FP: %X", f_tell(&midi_file.ptr));
 }
 
 unsigned long get_variable_data(){
@@ -54,14 +67,26 @@ unsigned long get_variable_data(){
 
 uint8_t read_next_track_event(){
     uint8_t evt = get_next_byte();
+    //printf("Found track event %X\n\r", evt);
     if (evt == 0xFF){
         get_meta_event();
     } else if (evt == 0xF0){
+        //printf("Found some text.\r\n");
         unsigned long len = get_variable_data();
-        f_lseek(&midi_file.ptr, len + 1);
+        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len + 1);
     } else if (evt == 0xF7){
+        //printf("Found some stuff. Skipping it.\r\n");
         unsigned long len = get_variable_data();
-        f_lseek(&midi_file.ptr, len);
+        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
+    } else if (evt == 0xB0){
+        //printf("Found B0\r\n");
+        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
+    } else if ((evt & 0xF0) == 0xC0) {
+        //printf("MIDI track event.\r\n");
+        uint8_t trash = get_next_byte(); // No clue what this is but causes mass chaos if not removed.    
+    } else {
+        UINT loc = f_tell(&midi_file.ptr);
+        printf("WARNING: EVENT @ %d %X NOT KNOWN!\r\n", loc, evt);
     }
     return evt;
 }
@@ -71,30 +96,23 @@ unsigned long read_next_midi_data(){
     memset(updates, 0, MIDI_EVENT_LIMIT);
     int events_read = 0;
     unsigned long delay = 0;
-
-    while(!delay && events_read < MIDI_EVENT_LIMIT && f_tell(&midi_file.ptr) < midi_file.next_track_start) {
-        // TODO: grab the first delay and schedule this function
-        // TODO: then, use the returned delay to schedule this function again.
-        uint8_t evt = read_next_track_event();
-        printf("found event: %X\r\n", evt);
-        if (evt != 0xFF && evt != 0xF0 && evt != 0xF7) {
+    //printf("Reading next midi data.\r\n");
+    while(!delay && events_read < MIDI_EVENT_LIMIT) {
+        uint8_t evt = (read_next_track_event());
+        if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
             MidiEvent mevt = get_midi_event(evt);
-            printf("found Note");
             updates[events_read] = mevt;
             events_read++;
         }
         delay = get_variable_data();
     }
-    if (f_tell(&midi_file.ptr) >= midi_file.next_track_start){
-        printf("found next header");
-        start_next_track();
-    }
     // Update leds based on updates
-    printf("events read: %d\r\n", events_read);
+    //printf("MIDI events read: %d\r\n", events_read);
     // TODO: For some reason this for loop is still being entered.. why??
     for(int i = 0; i < events_read; i++){
         MidiEvent curr = updates[i];
         int stat = curr.ID == 0x90 ? 1 : 0;
+        //printf("Setting key %d to %d\r\n", curr.note, stat);
         set_key_velocity(curr.note, stat, curr.velocity);
     }
     unsigned long delay_ms = delay * midi_file.mseconds_per_tick;
@@ -103,10 +121,10 @@ unsigned long read_next_midi_data(){
 
 void start_next_track(){
     UINT br;
+    // TODO: See if we're at the end of the file, if so do something about it.
     uint8_t trkhead[8] = {0}; // 'MTrk' = 4, length = 4 | total 8
     FRESULT ff_result = f_read(&midi_file.ptr, trkhead, 8, &br);
-    uint32_t trklen_bytes = (trkhead[4] << 24) | (trkhead[5] << 16) | (trkhead[6] << 8) | trkhead[7];
-    midi_file.next_track_start = f_tell(&midi_file.ptr) + trklen_bytes;
+    printf("Read track header. Start: %X End: %X\r\n", trkhead[0], trkhead[7]);
 }
 
 unsigned long init_midi_file(char* filename){
@@ -193,20 +211,19 @@ unsigned long init_midi_file(char* filename){
     uint8_t header[14] = {0}; // 'MThd' = 4, length = 4, format = 2, ntrks = 2, division = 2 | total = 14
     UINT br = 0;
     ff_result = f_read(&midi_file.ptr, header, 14, &br);
-    printf("%d Read: %c%c %c%c\r\n", br, header[0], header[1], header[2], header[3]);
+    printf("Parsed Header\r\n");
     if(ff_result != FR_OK){
       printf("%d\r\n", ff_result);
     }
     midi_file.format = header[8] << 8 | header[9];
     midi_file.numTracks = header[10] << 8 | header[11];
     midi_file.division = header[12] << 8 | header[13];
-    midi_file.tempo = 500000; // 120 BPM
+    midi_file.tempo = 500000 / TEMP_DIV; // 120 BPM
     midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
     // Now we can start with the "meat" of the file
     start_next_track();
     unsigned long delay_ticks = get_variable_data();
     unsigned long delay_ms = delay_ticks * midi_file.mseconds_per_tick;
-    printf("delaying for: %ld ms", delay_ms);
+    printf("delaying for: %ld ms\r\n", delay_ms);
     return delay_ms;
-    // NOTE: Check to see if fp is at next_track_start after getting delay (upon read_next_midi_data return)
 }

@@ -1167,13 +1167,14 @@ static void advertising_start(void)
 }
 
 void midi_scheduled_event(void* p_event_data, uint16_t event_size){
+    printf("midi_scheduled_event started\r\n");
     unsigned long next_delay_ms = read_next_midi_data();
     midi_delay(next_delay_ms); 
 }
 
 static void midi_delay_done_handler(void* p_context){
     UNUSED_PARAMETER(p_context);
-    app_sched_event_put(&sd_evt, sizeof(sd_evt), midi_scheduled_event);
+    app_sched_event_put(NULL, NULL, midi_scheduled_event);
 }
 
 void midi_delay(unsigned long time_ms){
@@ -1197,14 +1198,14 @@ int main(void)
     //log_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
-    buttons_leds_init(&erase_bonds);
-    power_management_init();
-    ble_stack_init();
-    gap_params_init();
-    gatt_init();
-    services_init();
-    advertising_init();
-    conn_params_init();
+    //buttons_leds_init(&erase_bonds);
+    //power_management_init();
+    //ble_stack_init();
+    //gap_params_init();
+    //gatt_init();
+    //services_init();
+    //advertising_init();
+    //conn_params_init();
     // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
     // fatfs_init();
     //fatfs_example();
@@ -1221,7 +1222,7 @@ int main(void)
     // Start execution.
     printf("\r\nUART started.\r\n");
     NRF_LOG_INFO("Debug logging for UART over RTT started.");
-    advertising_start();
+    //advertising_start();
 
     // LEDs
     initialize_led_strip(144, 25);
