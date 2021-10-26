@@ -53,6 +53,7 @@ void get_meta_event(){
     //printf("FP: %X", f_tell(&midi_file.ptr));
 }
 
+/*
 unsigned long get_variable_data(){
     unsigned long v_data = 0;
     uint8_t more_bytes;
@@ -60,10 +61,28 @@ unsigned long get_variable_data(){
         v_data <<= 7;
         uint8_t next_byte = get_next_byte();
         more_bytes = next_byte & 0x80;
+
         v_data |= next_byte & 0x7f;
     } while(more_bytes);
 
     return v_data;
+}
+*/
+unsigned long get_variable_data()
+{
+    unsigned long value;
+    unsigned char c;
+
+    if ( (value = get_next_byte()) & 0x80 )
+    {
+       value &= 0x7F;
+       do
+       {
+         value = (value << 7) + ((c = get_next_byte()) & 0x7F);
+       } while (c & 0x80);
+    }
+    printf("%ld\r\n", value);
+    return value;
 }
 
 uint8_t read_next_track_event(){
@@ -98,7 +117,7 @@ unsigned long read_next_midi_data(){
     int events_read = 0;
     unsigned long delay = 0;
     //printf("Reading next midi data.\r\n");
-    while(!endFlag && !delay && events_read < MIDI_EVENT_LIMIT) {
+    while(!endFlag && delay == 0 && events_read < MIDI_EVENT_LIMIT) {
         uint8_t evt = (read_next_track_event());
         if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
             MidiEvent mevt = get_midi_event(evt);
@@ -106,7 +125,9 @@ unsigned long read_next_midi_data(){
             events_read++;
         }
         delay = get_variable_data();
+        printf("delay 2 = %ld\r\n",delay); 
     }
+    
     // Update leds based on updates
     //printf("MIDI events read: %d\r\n", events_read);
     // TODO: For some reason this for loop is still being entered.. why??
@@ -116,8 +137,14 @@ unsigned long read_next_midi_data(){
         //printf("Setting key %d to %d\r\n", curr.note, stat);
         set_key_velocity(curr.note, stat, curr.velocity);
     }
-    unsigned long delay_ms = delay * midi_file.mseconds_per_tick;
-    return delay_ms; 
+
+    if (endFlag) {
+      return -1;
+    }
+    return delay * midi_file.mseconds_per_tick;
+
+    //printf("Delay11: %ld\r\n", delay_ms);
+
 }
 
 void start_next_track(){
@@ -220,7 +247,10 @@ unsigned long init_midi_file(char* filename){
     midi_file.numTracks = header[10] << 8 | header[11];
     midi_file.division = header[12] << 8 | header[13];
     midi_file.tempo = 500000 / TEMP_DIV; // 120 BPM
-    midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
+    midi_file.mseconds_per_tick = 1;//(midi_file.tempo / midi_file.division) / 1000; TODO
+    //printf("Tempo: %ld\r\n",  midi_file.tempo);
+   // printf("Division: %ld\r\n",  midi_file.division);
+    
     // Now we can start with the "meat" of the file
     start_next_track();
     unsigned long delay_ticks = get_variable_data();

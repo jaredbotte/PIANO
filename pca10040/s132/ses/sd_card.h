@@ -2,6 +2,7 @@
 #define SD_CARD_H_
 
 #include "ff.h"
+#include "ffconf.h"
 #include "diskio_blkdev.h"
 #include "bsp.h"
 #include "nrf_block_dev_sdc.h"

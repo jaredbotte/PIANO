@@ -68,7 +68,7 @@
 
 #define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 
-#define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_DURATION                0                                           /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
@@ -255,8 +255,8 @@ void led_update (void* p_event_data, uint16_t event_size) {
 void TIMER3_IRQHandler(void)
 {
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
-  //update_led_strip();
-  app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
+  update_led_strip();
+  //app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
 }
 
 
@@ -1089,7 +1089,7 @@ static void advertising_init(void)
 
     init.advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance = false;
-    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
     init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.srdata.uuids_complete.p_uuids  = m_adv_uuids;
@@ -1174,18 +1174,29 @@ void midi_scheduled_event(void* p_event_data, uint16_t event_size){
 
 static void midi_delay_done_handler(void* p_context){
     UNUSED_PARAMETER(p_context);
-    app_sched_event_put(NULL, NULL, midi_scheduled_event);
+    //app_sched_event_put(&sd_evt, sizeof(sd_evt), midi_scheduled_event);
+    unsigned long next_delay_ms = read_next_midi_data();
+    //printf("Delaying %d ms\r\n", next_delay_ms);
+    midi_delay(next_delay_ms); 
 }
 
 void midi_delay(unsigned long time_ms){
-    APP_TIMER_DEF(midi_timer);
-    ret_code_t err_code;
-    err_code = app_timer_create(&midi_timer, APP_TIMER_MODE_SINGLE_SHOT, midi_delay_done_handler);
-    APP_ERROR_CHECK(err_code);
+    if (time_ms < 0) {
+        return;
+    }
+    if (time_ms == 0) {
+      midi_delay(read_next_midi_data());
+    }
+    else {
+      APP_TIMER_DEF(midi_timer);
+      ret_code_t err_code;
+      err_code = app_timer_create(&midi_timer, APP_TIMER_MODE_SINGLE_SHOT, midi_delay_done_handler);
+      APP_ERROR_CHECK(err_code);
 
-    err_code = app_timer_start(midi_timer, APP_TIMER_TICKS(time_ms), NULL);
-    APP_ERROR_CHECK(err_code);
-}
+      err_code = app_timer_start(midi_timer, APP_TIMER_TICKS(time_ms), NULL);
+      APP_ERROR_CHECK(err_code);
+     }
+  }
 
 /**@brief Application main function.
  */
@@ -1198,14 +1209,14 @@ int main(void)
     //log_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
-    //buttons_leds_init(&erase_bonds);
-    //power_management_init();
-    //ble_stack_init();
-    //gap_params_init();
-    //gatt_init();
-    //services_init();
-    //advertising_init();
-    //conn_params_init();
+    buttons_leds_init(&erase_bonds);
+    power_management_init();
+    ble_stack_init();
+    gap_params_init();
+    gatt_init();
+    services_init();
+    advertising_init();
+    conn_params_init();
     // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
     // fatfs_init();
     //fatfs_example();
