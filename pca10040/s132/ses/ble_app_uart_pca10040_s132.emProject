@@ -134,6 +134,8 @@
     <folder Name="FATFS">
       <file file_name="../../../../../../external/fatfs/port/diskio_blkdev.c" />
       <file file_name="../../../../../../external/fatfs/src/ff.c" />
+      <file file_name="../../../../../../external/fatfs/src/ffconf.h" />
+      <file file_name="../../../../../../external/fatfs/src/option/unicode.c" />
     </folder>
     <configuration
       Name="Release"
