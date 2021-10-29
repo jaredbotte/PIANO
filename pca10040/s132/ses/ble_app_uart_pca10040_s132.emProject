@@ -140,11 +140,20 @@
     </folder>
     <configuration
       Name="Release"
-      c_user_include_directories=".;../../../../../../components/boards;../../../../../../components/drivers_nrf/nrf_soc_nosd;../../../../../../components/libraries/atomic;../../../../../../components/libraries/balloc;../../../../../../components/libraries/block_dev;../../../../../../components/libraries/block_dev/sdc;../../../../../../components/libraries/bsp;../../../../../../components/libraries/delay;../../../../../../components/libraries/experimental_section_vars;../../../../../../components/libraries/fifo;../../../../../../components/libraries/log;../../../../../../components/libraries/log/src;../../../../../../components/libraries/memobj;../../../../../../components/libraries/ringbuf;../../../../../../components/libraries/sdcard;../../../../../../components/libraries/strerror;../../../../../../components/libraries/uart;../../../../../../components/libraries/util;../../../../../../components/toolchain/cmsis/include;../../..;../../../../../../external/fatfs/port;../../../../../../modules/nrfx;../../../../../../external/fatfs/src;../../../../../../external/fprintf;../../../../../../external/protothreads;../../../../../../external/protothreads/pt-1.4;../../../../../../external/segger_rtt;../../../../../../integration/nrfx;../../../../../../integration/nrfx/legacy;../../../../../../modules/nrfx/drivers/include;../../../../../../modules/nrfx/hal;../../../../../../modules/nrfx/mdk;../config" />
+      c_user_include_directories=".;../../../../../../components/boards;../../../../../../components/drivers_nrf/nrf_soc_nosd;../../../../../../components/libraries/atomic;../../../../../../components/libraries/balloc;../../../../../../components/libraries/block_dev;../../../../../../components/libraries/block_dev/sdc;../../../../../../components/libraries/bsp;../../../../../../components/libraries/delay;../../../../../../components/libraries/experimental_section_vars;../../../../../../components/libraries/fifo;../../../../../../components/libraries/log;../../../../../../components/libraries/log/src;../../../../../../components/libraries/memobj;../../../../../../components/libraries/ringbuf;../../../../../../components/libraries/sdcard;../../../../../../components/libraries/strerror;../../../../../../components/libraries/uart;../../../../../../components/libraries/util;../../../../../../components/toolchain/cmsis/include;../../..;../../../../../../external/fatfs/port;../../../../../../modules/nrfx;../../../../../../external/fatfs/src;../../../../../../external/fprintf;../../../../../../external/protothreads;../../../../../../external/protothreads/pt-1.4;../../../../../../external/segger_rtt;../../../../../../integration/nrfx;../../../../../../integration/nrfx/legacy;../../../../../../modules/nrfx/drivers/include;../../../../../../modules/nrfx/hal;../../../../../../modules/nrfx/mdk;../config;../../../../../../components/toolchain/cmsis/dsp/Include;../../../../../../components/toolchain/cmsis/dsp/ARM;../../../../../../components/toolchain/cmsis/dsp/ARM" />
     <folder Name="Include">
       <file file_name="leds.h" />
       <file file_name="sd_card.h" />
       <file file_name="midifile.h" />
+    </folder>
+    <folder Name="FPU">
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/GCC/libarm_cortexM4l_math.a" />
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/GCC/libarm_cortexM4lf_math.a" />
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/ARM/arm_cortexM4l_math.lib" />
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/ARM/arm_cortexM4lf_math.lib" />
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/Include/arm_common_tables.h" />
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/Include/arm_const_structs.h" />
+      <file file_name="../../../../../../components/toolchain/cmsis/dsp/Include/arm_math.h" />
     </folder>
   </project>
   <configuration

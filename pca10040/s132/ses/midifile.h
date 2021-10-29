@@ -5,6 +5,8 @@
 #include "nrf_log.h"
 #include "ff.h"
 #include "leds.h"
+#include "arm_math.h"
+#include "arm_math.h"
 
 #define MIDI_EVENT_LIMIT 10
 #define TEMP_DIV 1
@@ -20,7 +22,7 @@ typedef struct {
     uint16_t format;
     uint16_t numTracks;
     uint16_t division;
-    int mseconds_per_tick;
+    double mseconds_per_tick;
     uint32_t tempo; // uS/qn
 } MidiFile;
 

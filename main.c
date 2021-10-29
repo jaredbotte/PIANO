@@ -255,8 +255,8 @@ void led_update (void* p_event_data, uint16_t event_size) {
 void TIMER3_IRQHandler(void)
 {
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
-  update_led_strip();
-  //app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
+  //update_led_strip();
+  app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
 }
 
 
@@ -364,10 +364,14 @@ void fileWrite(void* p_event_data, uint16_t event_size) {
     NRF_LOG_RAW_INFO("");
 
     NRF_LOG_INFO("Writing to file " FILE_NAME "...");
-    ff_result = f_open(&file, evt->filename, FA_READ | FA_WRITE | FA_OPEN_APPEND);
+    char fn[32];
+    strcpy(fn, evt->filename);
+
+    ff_result = f_open(&file,fn, FA_READ | FA_WRITE | FA_OPEN_APPEND);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
+        printf("File open failed!!!!! Error type %d\r\n", ff_result);
         return;
     }
 
@@ -594,9 +598,9 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         if (fileTransfer && !transferStarted) {// seting filename
             strncpy(&filename, &data, size);
             transferStarted = true;
-            printf("File Name: %s\r\n", filename);
-            printf("Filename size: %d\r\n", strlen(filename));
-            printf("Size: %d\r\n", size);
+            //printf("File Name: %s\r\n", filename);
+            //printf("Filename size: %d\r\n", strlen(filename));
+            //printf("Size: %d\r\n", size);
             filename[strlen(filename)-1] = '\0';
             return;
         }
@@ -614,7 +618,9 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 bufferFilled = true;
                 bufferBusy   = false;
                 
-                sd_evt.filename = "test.mid";
+                //strcpy(&(sd_evt.filename), &filename);
+                //printf("Filename: %s\r\n", sd_evt.filename);
+                sd_evt.filename = "test3.mid";
                 app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
                 
                 return;
@@ -1233,7 +1239,7 @@ int main(void)
     // Start execution.
     printf("\r\nUART started.\r\n");
     NRF_LOG_INFO("Debug logging for UART over RTT started.");
-    //advertising_start();
+    advertising_start();
 
     // LEDs
     initialize_led_strip(144, 25);

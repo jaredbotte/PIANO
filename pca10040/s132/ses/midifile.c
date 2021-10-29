@@ -20,7 +20,7 @@ MidiEvent get_midi_event(uint8_t statZ){
     uint8_t note_info[2] = {0};
     UINT br = 0;
     FRESULT res = f_read(&midi_file.ptr, note_info, 2, &br);
-    uint8_t newnote = note_info[0];
+    uint8_t newnote = note_info[0] -21;
     uint8_t vel = note_info[1];
     //printf("Creating MIDI Event with note %d, ID %d, and velocity %d\r\n", newnote, *wtf, vel);
     return (MidiEvent) {.ID = stat, .note=newnote, .velocity=vel};
@@ -81,7 +81,7 @@ unsigned long get_variable_data()
          value = (value << 7) + ((c = get_next_byte()) & 0x7F);
        } while (c & 0x80);
     }
-    printf("%ld\r\n", value);
+    //printf("%ld\r\n", value);
     return value;
 }
 
@@ -125,7 +125,7 @@ unsigned long read_next_midi_data(){
             events_read++;
         }
         delay = get_variable_data();
-        printf("delay 2 = %ld\r\n",delay); 
+        //printf("delay 2 = %ld\r\n",delay); 
     }
     
     // Update leds based on updates
@@ -141,7 +141,19 @@ unsigned long read_next_midi_data(){
     if (endFlag) {
       return -1;
     }
-    return delay * midi_file.mseconds_per_tick;
+
+    double delay_ms = delay * midi_file.mseconds_per_tick;
+    unsigned long delay_ms_int= (unsigned long)delay_ms;
+    printf("Delaying %ld ms\r\n", delay_ms_int);
+
+    // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
+    uint32_t fpscr_reg = __get_FPSCR();
+    __set_FPSCR(fpscr_reg & ~(0x0000009F));
+    (void) __get_FPSCR();
+    // Clear the pending FPU interrupt. Necessary when the application uses a SoftDevice with sleep modes
+    NVIC_ClearPendingIRQ(FPU_IRQn);
+
+    return delay_ms_int;
 
     //printf("Delay11: %ld\r\n", delay_ms);
 
@@ -230,7 +242,13 @@ unsigned long init_midi_file(char* filename){
         }
     }
     while (fno.fname[0]);
-    ff_result = f_open(&midi_file.ptr, "TEST.MID", FA_READ);
+
+    //TODO Check long file name
+    char fn[32];
+    strcpy(fn, filename);
+    ff_result = f_open(&midi_file.ptr, fn, FA_READ);
+
+    //ff_result = f_open(&midi_file.ptr, "TEST.MID", FA_READ);
     if(ff_result != FR_OK){
     printf("%d\r\n", ff_result);
         return; // We've encountered an error
@@ -247,14 +265,23 @@ unsigned long init_midi_file(char* filename){
     midi_file.numTracks = header[10] << 8 | header[11];
     midi_file.division = header[12] << 8 | header[13];
     midi_file.tempo = 500000 / TEMP_DIV; // 120 BPM
-    midi_file.mseconds_per_tick = 1;//(midi_file.tempo / midi_file.division) / 1000; TODO
+    midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000.;
     //printf("Tempo: %ld\r\n",  midi_file.tempo);
    // printf("Division: %ld\r\n",  midi_file.division);
     
     // Now we can start with the "meat" of the file
     start_next_track();
     unsigned long delay_ticks = get_variable_data();
-    unsigned long delay_ms = delay_ticks * midi_file.mseconds_per_tick;
-    printf("delaying for: %ld ms\r\n", delay_ms);
-    return delay_ms;
+    double delay_ms = delay_ticks * midi_file.mseconds_per_tick;
+    
+    unsigned long delay_ms_int = (unsigned long)delay_ms;
+    printf("Initial Delay: %ld ms\r\n", delay_ms_int);
+    // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
+    uint32_t fpscr_reg = __get_FPSCR();
+    __set_FPSCR(fpscr_reg & ~(0x0000009F));
+    (void) __get_FPSCR();
+    // Clear the pending FPU interrupt. Necessary when the application uses a SoftDevice with sleep modes
+    NVIC_ClearPendingIRQ(FPU_IRQn);
+
+    return delay_ms_int;
 }
