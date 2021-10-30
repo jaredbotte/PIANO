@@ -61,7 +61,7 @@
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define DEVICE_NAME                     "Nordic_UART"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "P.I.A.N.O."                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -127,7 +127,7 @@ NRF_BLE_QWR_DEF(m_qwr);                                                         
 BLE_ADVERTISING_DEF(m_advertising);                                                 /**< Advertising module instance. */
 
 static uint16_t   m_conn_handle          = BLE_CONN_HANDLE_INVALID;                 /**< Handle of the current connection. */
-static uint16_t   m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;            /**< Maximum length of data (in bytes) that can be transmitted to the peer by the Nordic UART service module. */
+static uint16_t   m_ble_nus_max_data_len = 512 - 3;            /**< Maximum length of data (in bytes) that can be transmitted to the peer by the Nordic UART service module. */
 static ble_uuid_t m_adv_uuids[]          =                                          /**< Universally unique service identifier. */
 {
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
@@ -136,15 +136,12 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 sd_write_evt sd_evt;
 
 
-// sdcard code
-//NRF_BLOCK_DEV_SDC_DEFINE(
-//        m_block_dev_sdc,
-//        NRF_BLOCK_DEV_SDC_CONFIG(
-//                SDC_SECTOR_SIZE,
-//                APP_SDCARD_CONFIG(SDC_MOSI_PIN, SDC_MISO_PIN, SDC_SCK_PIN, SDC_CS_PIN)
-//        ),
-//        NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
-//);
+// States defined here
+typedef enum states{VIS, LTP, PA}Mode;
+volatile Mode currentMode;
+volatile bool isConnected = false;
+volatile bool hasSDCard = false; // TODO: Check this on startup!
+volatile bool stateChanged = false;
 
 /**
  * @brief Function for demonstrating FAFTS usage.
@@ -261,32 +258,6 @@ void TIMER3_IRQHandler(void)
 
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
-    // FRESULT  ff_result;
-    // FIL      file;
-    // uint16_t bytes_written;
-
-    // //fatfs_init();
-    // sd_write_evt* evt = (sd_write_evt*) p_event_data;
-    // printf("Data: %s\r\n", evt->buf.data);
-    // ff_result = f_open(&file, evt->filename, FA_READ | FA_WRITE | FA_OPEN_APPEND);
-    // printf("FFRESULT: %d\r\n", ff_result);
-    // if (ff_result != FR_OK) {
-    //     printf("fread error func\r\n");
-    //     printf("Error type %d\r\n", ff_result);
-    //     return;
-    // }
-
-    // ff_result = f_write(&file, evt->buf.data, evt->buf.length, (UINT*)& bytes_written);
-
-    // if (ff_result != FR_OK) {
-    //     printf("fwrite error func\r\n");
-    //     printf("Error type %d\r\n", ff_result);
-    //     return;
-    // }
-
-    // (void) f_close(&file);
-    //fatfs_example();
-
     static FATFS fs;
     static DIR dir;
     static FILINFO fno;
@@ -487,6 +458,29 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         int size = p_evt->params.rx_data.length;
         sd_evt.buf.length = p_evt->params.rx_data.length;
 
+        // Start of critical system commands!
+        if (strncmp(&data, "VIS", 3) == 0) {
+            if (currentMode != VIS){
+                currentMode = VIS;
+                stateChanged = true;
+            }
+         }
+
+         if (strncmp(&data, "LTP", 3) == 0) {
+            if (currentMode != LTP){
+                currentMode = LTP;
+                stateChanged = true;
+            }   
+         }
+
+         if (strncmp(&data, "PA", 2) == 0) {
+            if (currentMode != PA){
+                currentMode = PA;
+                stateChanged = true;
+            }
+         }
+        // End of critical system commands!
+
         if (strncmp(&data, "write", 5) == 0){
             //writeEnable = true;
             sd_evt.filename = "test.txt";
@@ -496,13 +490,13 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         if (strncmp(&data, "blue",4) == 0) {
             Color blue = {.red = 0, .green = 0, .blue = 60};
             fill_color(blue);
-            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
+            
         }
 
         if (strncmp(&data, "red",3) == 0) {
             Color red = {.red = 60, .green = 0, .blue = 0};
             fill_color(red);
-            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
+            err_code = ble_nus_data_send(&m_nus, "eof", 3, m_conn_handle);
         }
 
         if (strncmp(&data, "green",5) == 0) {
@@ -799,6 +793,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
             nrf_gpio_pin_set(6);
+            isConnected = true;
+            //err_code = ble_nus_data_send(&m_nus, "System Initialized", 19, m_conn_handle);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -806,6 +802,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             // LED indication will be changed when advertising starts.
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             nrf_gpio_pin_clear(6);
+            isConnected = false;
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -983,7 +980,13 @@ void uart_event_handle(app_uart_evt_t * p_event)
             {
               int type = lastEvent == 0x90 ? 1 : 0; 
               //set_key(keyNum, type, GREEN);
-              set_key_velocity(keyNum, type, eventUART);
+              if (currentMode == VIS) {
+                set_key_velocity(keyNum, type, eventUART);
+              } else if (currentMode == PA) {
+                set_key_play(keyNum, type);
+              } else if (currentMode == LTP) {
+                set_key_learn(keyNum, type);
+              }
               //eventUART is now the velocity.
               noteFlag = 0;
             }
@@ -1189,7 +1192,12 @@ static void midi_delay_done_handler(void* p_context){
 }
 
 void midi_delay(unsigned long time_ms){
+    if (currentMode == VIS) {
+        fill_color(OFF);
+        return;
+    }
     if (time_ms < 0) {
+        currentMode = VIS;
         return;
     }
     if (time_ms == 0) {
@@ -1206,11 +1214,31 @@ void midi_delay(unsigned long time_ms){
      }
   }
 
+void midi_operations() {
+    if (stateChanged){
+        if (currentMode == LTP){
+            printf("Now in LTP\r\n");
+        } 
+        else if (currentMode == PA){
+            printf("Now in PA\r\n");
+            midi_delay(init_midi_file("TEST.MID"));
+        } 
+        else {
+            printf("Now in VIS\r\n");
+            currentMode = VIS;
+        }
+        stateChanged = false;
+    }
+
+    return;
+}
+
 /**@brief Application main function.
  */
 int main(void)
 {
     bool erase_bonds;
+    currentMode = VIS;
 
     // Initialize BLE.
     uart_init();
@@ -1245,8 +1273,9 @@ int main(void)
 
     // LEDs
     initialize_led_strip(144, 25);
+    //fill_color(RED);
 
-    midi_delay(init_midi_file("TEST.MID"));
+    //midi_delay(init_midi_file("TEST.MID"));
 
     // Enter main loop.
     
@@ -1254,5 +1283,6 @@ int main(void)
     {
         idle_state_handle();
         app_sched_execute();
+        midi_operations();
     }
 }

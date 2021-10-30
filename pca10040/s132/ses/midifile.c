@@ -4,6 +4,8 @@
 #include "midifile.h"
 
 bool endFlag = false;
+typedef enum states{VIS, LTP, PA}Mode;
+extern currentMode;
 
 uint8_t get_next_byte(){
     uint8_t byte = 0;
@@ -35,7 +37,9 @@ void get_meta_event(){
         }   
         else {
           printf("EOF reached\r\n");
+          currentMode = VIS;
           endFlag = true;
+          f_close(&midi_file.ptr);
         }   
     } else if (meta_type == 0x51){ // Tempo setting
         //printf("tempo!\r\n");
@@ -242,6 +246,8 @@ unsigned long init_midi_file(char* filename){
         }
     }
     while (fno.fname[0]);
+
+    endFlag = false;
 
     //TODO Check long file name
     char fn[32];

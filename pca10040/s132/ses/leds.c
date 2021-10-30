@@ -111,6 +111,23 @@ void set_key_velocity(int key_num, int stat, int velocity){
     }
 }
 
+void set_key_learn(int key_num, int stat){
+    /*if (correctKey && keyPressed){
+        light key green;
+    } else if (correctKey & !keyPressed){
+        light key blue;
+    } else if (!correctKey & keyPressed) {
+        light key red;
+    } else if (!correctKey & !keyPressed) {
+        light key off;
+    }*/
+
+}
+
+void set_key_play(int key_num, int stat){
+
+}
+
 
 void fill_test(){
   Color red = (Color) {.red = 0, .green = 32, .blue = 0};
