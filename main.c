@@ -798,12 +798,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
+            nrf_gpio_pin_set(6);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected");
             // LED indication will be changed when advertising starts.
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
+            nrf_gpio_pin_clear(6);
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -1044,7 +1046,7 @@ static void uart_init(void)
     app_uart_comm_params_t const comm_params =
     {
         .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = TX_PIN_NUMBER,
+        .tx_pin_no    = 10,
         .rts_pin_no   = RTS_PIN_NUMBER,
         .cts_pin_no   = CTS_PIN_NUMBER,
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
