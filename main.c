@@ -614,7 +614,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 
                 //strcpy(&(sd_evt.filename), &filename);
                 //printf("Filename: %s\r\n", sd_evt.filename);
-                sd_evt.filename = "test3.mid";
+                sd_evt.filename = "TEST3.MID";
                 app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
                 
                 return;
@@ -627,24 +627,24 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
 
         
-        //  for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
-        //  {
+          for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
+          {
 
 
-        //      do
-        //      {
-        //          err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
-        //          if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
-        //          {
-        //              NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
-        //              APP_ERROR_CHECK(err_code);
-        //          }
-        //      } while (err_code == NRF_ERROR_BUSY);
-        //  }
-        //  if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
-        //  {
-        //      while (app_uart_put('\n') == NRF_ERROR_BUSY);
-        //  }
+              do
+              {
+                  err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
+                  if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
+                  {
+                      NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
+                      APP_ERROR_CHECK(err_code);
+                  }
+              } while (err_code == NRF_ERROR_BUSY);
+          }
+          if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
+          {
+              while (app_uart_put('\n') == NRF_ERROR_BUSY);
+          }
     }
 
 }
@@ -1049,7 +1049,7 @@ static void uart_init(void)
     app_uart_comm_params_t const comm_params =
     {
         .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = 10,
+        .tx_pin_no    = 11,
         .rts_pin_no   = RTS_PIN_NUMBER,
         .cts_pin_no   = CTS_PIN_NUMBER,
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
@@ -1221,7 +1221,7 @@ void midi_operations() {
         } 
         else if (currentMode == PA){
             printf("Now in PA\r\n");
-            midi_delay(init_midi_file("TEST.MID"));
+            midi_delay(init_midi_file("TEST3.MID"));
         } 
         else {
             printf("Now in VIS\r\n");
