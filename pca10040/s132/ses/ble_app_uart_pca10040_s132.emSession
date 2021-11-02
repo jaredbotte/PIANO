@@ -25,6 +25,7 @@
   <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132"/>
   <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132;Application"/>
   <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132;Board Definition"/>
+  <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132;Board Support"/>
   <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132;FATFS"/>
   <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132;FPU"/>
   <ProjectSessionItem path="ble_app_uart_pca10040_s132;ble_app_uart_pca10040_s132;Include"/>
@@ -67,14 +68,21 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="81" y="1010" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="961" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="17" y="971" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="945" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="32" y="6" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="midifile.c" selected="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="26" y="8" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.h" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="10" y="24" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="midifile.h" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="1" y="128" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.c" selected="0" top="96" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="22" y="23" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="midifile.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="3" y="393" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="leds.c" selected="0" top="369" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="37" y="7635" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="7620" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="99" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="76" codecName=""/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="99" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="76" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="98" y="13" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="8" y="318" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="../../../../../../components/softdevice/s132/headers/ble_gap.h" selected="0" top="302" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="76" y="30" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/ble/common/ble_advdata.c" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="26" y="189" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/bsp/bsp.c" selected="0" top="223" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="8" y="103" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/components/libraries/bsp/bsp.c" useBinaryEdit="0" left="0" path="../../../../../../components/boards/boards.h" selected="0" top="87" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="4" y="58" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/pca10040/s132/ses/leds.c" useBinaryEdit="0" left="0" path="../../../../../../components/boards/boards.c" selected="0" top="42" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="4" y="659" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/pca10040/s132/ses/leds.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer2.c" selected="0" top="643" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="10" y="88" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/bsp/bsp_btn_ble.c" selected="1" top="72" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="//nas01.itap.purdue.edu/puhome/desktop/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/components/toolchain/cmsis/dsp/Include" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="//nas01.itap.purdue.edu/puhome/desktop/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/components/toolchain/cmsis/dsp/Include" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>

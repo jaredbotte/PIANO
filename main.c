@@ -1256,10 +1256,6 @@ int main(void)
     // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
     // fatfs_init();
     //fatfs_example();
-    
-
-    // Initialize FATFS
-    bsp_board_init(BSP_INIT_LEDS);
 
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     //NRF_LOG_DEFAULT_BACKENDS_INIT();
