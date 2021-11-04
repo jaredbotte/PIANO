@@ -120,6 +120,7 @@ unsigned long read_next_midi_data(){
     while(!endFlag && delay == 0 && events_read < MIDI_EVENT_LIMIT) {
         uint8_t evt = (read_next_track_event());
         if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
+            evt = (evt&0xF0);
             MidiEvent mevt = get_midi_event(evt);
             updates[events_read] = mevt;
             events_read++;
@@ -135,7 +136,8 @@ unsigned long read_next_midi_data(){
         MidiEvent curr = updates[i];
         int stat = curr.ID == 0x90 ? 1 : 0;
         //printf("Setting key %d to %d\r\n", curr.note, stat);
-        set_key_velocity(curr.note, stat, curr.velocity);
+        //set_key_velocity(curr.note, stat, curr.velocity);
+        set_key(curr.note, stat, BLUE);
     }
 
     if (endFlag) {
@@ -144,7 +146,7 @@ unsigned long read_next_midi_data(){
 
     double delay_ms = delay * midi_file.mseconds_per_tick;
     unsigned long delay_ms_int= (unsigned long)delay_ms;
-    printf("Delaying %ld ms\r\n", delay_ms_int);
+    //printf("Delaying %ld ms\r\n", delay_ms_int);
 
     // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
     uint32_t fpscr_reg = __get_FPSCR();

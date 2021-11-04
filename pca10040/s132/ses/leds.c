@@ -148,6 +148,9 @@ void initialize_led_strip(int num, int pin){
     num_leds = num;
     led_pin = pin;
     buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
+    if (buffer == NULL){
+        printf("Memory Limit Reached :(");
+    }
     key_array = malloc(sizeof(*key_array) * num_keys);
     setup_key_array(num_keys);
     for(int i = num_leds * 24; i < num_leds * 24 + 40; i++){

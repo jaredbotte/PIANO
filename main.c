@@ -1066,6 +1066,7 @@ int main(void)
     bool erase_bonds;
     currentMode = VIS;
 
+
     // Initialize BLE.
     uart_init();
     timers_init();
@@ -1084,7 +1085,7 @@ int main(void)
     advertising_start();
 
     // LEDs
-    initialize_led_strip(144, 25);
+    initialize_led_strip(150, 25);
     //fill_color(RED);
 
     //midi_delay(init_midi_file("TEST.MID"));
