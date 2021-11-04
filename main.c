@@ -53,11 +53,6 @@
 #define FILE_NAME "Test with bluetooth.txt"
 #define TEST_STRING "This is a test string."
 
-// BOTH
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
-
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -136,114 +131,15 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 sd_write_evt sd_evt;
 
 
-// States defined here
+// States & vars defined here
 typedef enum states{VIS, LTP, PA}Mode;
 volatile Mode currentMode;
 volatile bool isConnected = false;
 volatile bool hasSDCard = false; // TODO: Check this on startup!
 volatile bool stateChanged = false;
-
-/**
- * @brief Function for demonstrating FAFTS usage.
- */
-static void fatfs_example()
-{
-    static FATFS fs;
-    static DIR dir;
-    static FILINFO fno;
-    static FIL file;
-
-    uint32_t bytes_written;
-    FRESULT ff_result;
-    DSTATUS disk_state = STA_NOINIT;
-
-    // Initialize FATFS disk I/O interface by providing the block device. 
-    static diskio_blkdev_t drives[] =
-    {
-            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
-    };
-
-    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
-
-    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
-    for (uint32_t retries = 3; retries && disk_state; --retries)
-    {
-        //printf("%x\n", disk_state);
-        disk_state = disk_initialize(0);
-    }
-    if (disk_state)
- 
-    {
-      
-        NRF_LOG_INFO("Disk initialization failed.");
-        return;
-    }
-
-    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
-    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_INFO("Capacity: %d MB", capacity);
-
-    NRF_LOG_INFO("Mounting volume...");
-    ff_result = f_mount(&fs, "", 1);
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Mount failed.");
-        return;
-    }
-
-    NRF_LOG_INFO("\r\n Listing directory: /");
-    ff_result = f_opendir(&dir, "/");
-    if (ff_result)
-    {
-        NRF_LOG_INFO("Directory listing failed!");
-        return;
-    }
-
-    do
-    {
-        ff_result = f_readdir(&dir, &fno);
-        if (ff_result != FR_OK)
-        {
-            NRF_LOG_INFO("Directory read failed.");
-            return;
-        }
-
-        if (fno.fname[0])
-        {
-            if (fno.fattrib & AM_DIR)
-            {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
-            }
-            else
-            {
-                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
-            }
-        }
-    }
-    while (fno.fname[0]);
-    NRF_LOG_RAW_INFO("");
-
-    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
-    ff_result = f_open(&file, FILE_NAME, FA_READ | FA_WRITE | FA_OPEN_APPEND);
-    if (ff_result != FR_OK)
-    {
-        NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
-        return;
-    }
-
-    ff_result = f_write(&file, TEST_STRING, sizeof(TEST_STRING) - 1, (UINT *) &bytes_written);
-    if (ff_result != FR_OK)
-    {
-       printf("Write failed\r\n.");
-    }
-    else
-    {
-        NRF_LOG_INFO("%d bytes written.", bytes_written);
-    }
-
-    (void) f_close(&file);
-    return;
-}
+static int noteFlag = 0;
+static uint8_t lastEvent = 0;
+static uint8_t keyNum = 0x00;
 
 void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
@@ -251,7 +147,7 @@ void led_update (void* p_event_data, uint16_t event_size) {
 
 void TIMER3_IRQHandler(void)
 {
-  NRF_TIMER3->EVENTS_COMPARE[0] = 0;           //Clear compare register 0 event	
+  NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
   //update_led_strip();
   app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
 }
@@ -276,37 +172,27 @@ void fileWrite(void* p_event_data, uint16_t event_size) {
 
     diskio_blockdev_register(drives, ARRAY_SIZE(drives));
 
-    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
     for (uint32_t retries = 3; retries && disk_state; --retries)
     {
-        //printf("%x\n", disk_state);
         disk_state = disk_initialize(0);
     }
     if (disk_state)
- 
     {
-      
         printf("Disk initialization failed.\r\t");
         return;
     }
 
     uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
     uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_INFO("Capacity: %d MB", capacity);
-
-    NRF_LOG_INFO("Mounting volume...");
     ff_result = f_mount(&fs, "", 1);
     if (ff_result)
     {
-        NRF_LOG_INFO("Mount failed.");
         return;
     }
 
-    NRF_LOG_INFO("\r\n Listing directory: /");
     ff_result = f_opendir(&dir, "/");
     if (ff_result)
     {
-        NRF_LOG_INFO("Directory listing failed!");
         return;
     }
 
@@ -315,48 +201,30 @@ void fileWrite(void* p_event_data, uint16_t event_size) {
         ff_result = f_readdir(&dir, &fno);
         if (ff_result != FR_OK)
         {
-            NRF_LOG_INFO("Directory read failed.");
             return;
-        }
-
-        if (fno.fname[0])
-        {
-            if (fno.fattrib & AM_DIR)
-            {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
-            }
-            else
-            {
-                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
-            }
         }
     }
     while (fno.fname[0]);
-    NRF_LOG_RAW_INFO("");
 
-    NRF_LOG_INFO("Writing to file " FILE_NAME "...");
     char fn[32];
     strcpy(fn, evt->filename);
 
     ff_result = f_open(&file,fn, FA_READ | FA_WRITE | FA_OPEN_APPEND);
     if (ff_result != FR_OK)
     {
-        NRF_LOG_INFO("Unable to open or create file: " FILE_NAME ".");
-        printf("File open failed!!!!! Error type %d\r\n", ff_result);
+        printf("File open failed. Error type %d\r\n", ff_result);
         return;
     }
 
     ff_result = f_write(&file, evt->buf.data, evt->buf.length, (UINT *) &bytes_written);
     if (ff_result != FR_OK)
     {
-       printf("Write failed\r\n.");
+       printf("Write failed.\r\n.");
     }
     else
     {
-        NRF_LOG_INFO("%d bytes written.", bytes_written);
         num_written++;
         bytes_w+=bytes_written;
-
         printf("%d bytes has been written\r\n", bytes_w);
     }
 
@@ -444,10 +312,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
     if (p_evt->type == BLE_NUS_EVT_RX_DATA)
     {
         uint32_t err_code;
-        
-        NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
-        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
-
         uint8_t data[BLE_BUF_SIZE];
         memset(&data, 0,BLE_BUF_SIZE);
 
@@ -600,7 +464,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         }
 
         if (fileTransfer && transferStarted) {//writing data
-
             //while (bufferLock){};
             
                 bufferBusy = true;
@@ -617,34 +480,24 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 sd_evt.filename = "TEST3.MID";
                 app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
                 
-                return;
-            
+                return;      
         }
-
-        
-
-
-
-
-        
-          for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
+    
+        for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
+        {
+          do
           {
-
-
-              do
-              {
-                  err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
-                  if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
-                  {
-                      NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
-                      APP_ERROR_CHECK(err_code);
-                  }
-              } while (err_code == NRF_ERROR_BUSY);
-          }
-          if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
-          {
+            err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
+            if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
+            {
+              APP_ERROR_CHECK(err_code);
+            }
+          } while (err_code == NRF_ERROR_BUSY);
+        }
+        if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
+        {
               while (app_uart_put('\n') == NRF_ERROR_BUSY);
-          }
+        }
     }
 
 }
@@ -786,7 +639,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            NRF_LOG_INFO("Connected");
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -798,8 +650,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            NRF_LOG_INFO("Disconnected");
-            // LED indication will be changed when advertising starts.
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             nrf_gpio_pin_clear(6);
             isConnected = false;
@@ -807,7 +657,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
-            NRF_LOG_DEBUG("PHY update request.");
             ble_gap_phys_t const phys =
             {
                 .rx_phys = BLE_GAP_PHY_AUTO,
@@ -844,7 +693,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         default:
-            // No implementation needed.
             break;
     }
 }
@@ -882,11 +730,7 @@ void gatt_evt_handler(nrf_ble_gatt_t * p_gatt, nrf_ble_gatt_evt_t const * p_evt)
     if ((m_conn_handle == p_evt->conn_handle) && (p_evt->evt_id == NRF_BLE_GATT_EVT_ATT_MTU_UPDATED))
     {
         m_ble_nus_max_data_len = p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
-        NRF_LOG_INFO("Data len is set to 0x%X(%d)", m_ble_nus_max_data_len, m_ble_nus_max_data_len);
     }
-    NRF_LOG_DEBUG("ATT MTU exchange completed. central 0x%x peripheral 0x%x",
-                  p_gatt->att_mtu_desired_central,
-                  p_gatt->att_mtu_desired_periph);
 }
 
 
@@ -948,14 +792,8 @@ void bsp_event_handler(bsp_event_t event)
  *          'new line' '\n' (hex 0x0A) or if the string has reached the maximum data length.
  */
 /**@snippet [Handling the data received over UART] */
-static int noteFlag = 0; //Var that controls MIDI-DIN reception.
-static uint8_t lastEvent = 0;
-uint8_t keyNum = 0x00;
-//uint64_t noteListLower = 0;
-//uint32_t noteListUpper = 0;
 void uart_event_handle(app_uart_evt_t * p_event)
 {
-    //app_util_critical_region_enter(&nest);
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
     static uint8_t index = 0;
     uint32_t       err_code;
@@ -966,33 +804,32 @@ void uart_event_handle(app_uart_evt_t * p_event)
         case APP_UART_DATA_READY:  
             while(app_uart_get(&eventUART) != NRF_SUCCESS); //Pull a byte off the FIFO
             if(noteFlag == 0 && (eventUART == 0x90 || eventUART == 0x80)) { //Event headder
-              //noteFlag = eventUART == 0x90 ? 1 : 2;
               noteFlag = 1;
               lastEvent = eventUART;
               bsp_board_led_invert(2);
             }
-            else if(noteFlag == 1) //Note info && (eventUART < 128) && (eventUART >= 0)
+            else if(noteFlag == 1) //Note number
             {
-              keyNum = eventUART - 21;
+              int keyOffset = 21;
+              keyNum = eventUART - keyOffset;
               noteFlag = 2;
             }
             else if(noteFlag == 2) //Velocity info
             {
               int type = lastEvent == 0x90 ? 1 : 0; 
-              //set_key(keyNum, type, GREEN);
               if (currentMode == VIS) {
                 set_key_velocity(keyNum, type, eventUART);
-              } else if (currentMode == PA) {
+              } 
+              else if (currentMode == PA) {
                 set_key_play(keyNum, type);
-              } else if (currentMode == LTP) {
+              } 
+              else if (currentMode == LTP) {
                 set_key_learn(keyNum, type);
               }
-              //eventUART is now the velocity.
               noteFlag = 0;
             }
             else
             {
-              //UNUSED_VARIABLE(app_uart_get(&data_array[index]));
               data_array[index] = eventUART; //Give the data back to BLE if it was not a MIDI event.
               index++;
 
@@ -1002,9 +839,6 @@ void uart_event_handle(app_uart_evt_t * p_event)
               {
                   if (index > 1)
                   {
-                      //NRF_LOG_DEBUG("Ready to send data over BLE NUS");
-                      //NRF_LOG_HEXDUMP_DEBUG(data_array, index);
-
                       do
                       {
                           uint16_t length = (uint16_t)index;
@@ -1034,7 +868,6 @@ void uart_event_handle(app_uart_evt_t * p_event)
         default:
             break;
     }
-    //app_util_critical_region_exit(nest);
 }
 /**@snippet [Handling the data received over UART] */
 
@@ -1054,11 +887,7 @@ static void uart_init(void)
         .cts_pin_no   = CTS_PIN_NUMBER,
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
         .use_parity   = false,
-#if defined (UART_PRESENT)
         .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud31250
-#else
-        .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud31250
-#endif
     };
 
     APP_UART_FIFO_INIT(&comm_params,
@@ -1162,10 +991,7 @@ static void power_management_init(void)
  */
 static void idle_state_handle(void)
 {
-    if (NRF_LOG_PROCESS() == false)
-    {
-        nrf_pwr_mgmt_run();
-    }
+    nrf_pwr_mgmt_run();
 }
 
 
@@ -1242,7 +1068,6 @@ int main(void)
 
     // Initialize BLE.
     uart_init();
-    //log_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
     buttons_leds_init(&erase_bonds);
@@ -1253,18 +1078,9 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
-    // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
-    // fatfs_init();
-    //fatfs_example();
-
-    APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    //NRF_LOG_DEFAULT_BACKENDS_INIT();
-    NRF_LOG_INFO("FATFS example started.");
-
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
 
     // LEDs
