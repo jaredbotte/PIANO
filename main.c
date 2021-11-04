@@ -256,6 +256,10 @@ void TIMER3_IRQHandler(void)
   app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
 }
 
+void send_Message (char* msg) {
+    uint16_t size = strlen(msg);
+    ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
+}
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
     static FATFS fs;
@@ -358,9 +362,97 @@ void fileWrite(void* p_event_data, uint16_t event_size) {
         bytes_w+=bytes_written;
 
         printf("%d bytes has been written\r\n", bytes_w);
+
+        // char* msg = "rcvd";
+        // uint16_t size = strlen(msg);
+        // ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
+        send_Message("rcvd");
     }
 
     (void) f_close(&file);
+    return;
+}
+
+void list_Directory (void* p_event_data, uint16_t event_size){
+    static FATFS fs;
+    static DIR dir;
+    static FILINFO fno;
+    static FIL file;
+
+    uint32_t bytes_written;
+    FRESULT ff_result;
+    DSTATUS disk_state = STA_NOINIT;
+
+    send_Message("Listing");
+
+    // Initialize FATFS disk I/O interface by providing the block device. 
+    static diskio_blkdev_t drives[] =
+    {
+            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
+    };
+
+    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
+
+    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
+    for (uint32_t retries = 3; retries && disk_state; --retries)
+    {
+        //printf("%x\n", disk_state);
+        disk_state = disk_initialize(0);
+    }
+    if (disk_state)
+ 
+    {
+      
+        printf("Disk initialization failed.\r");
+        return;
+    }
+
+    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
+    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
+    NRF_LOG_INFO("Capacity: %d MB", capacity);
+
+    NRF_LOG_INFO("Mounting volume...");
+    ff_result = f_mount(&fs, "", 1);
+    if (ff_result)
+    {
+        printf("Mount failed.\r\n");
+        return;
+    }
+
+    NRF_LOG_INFO("\r\n Listing directory: /");
+    ff_result = f_opendir(&dir, "/");
+    if (ff_result)
+    {
+        printf("Directory listing failed!\r\n");
+        return;
+    }
+
+    do
+    {
+        ff_result = f_readdir(&dir, &fno);
+        if (ff_result != FR_OK)
+        {
+            printf("Directory read failed.\r\n");
+            return;
+        }
+
+        if (fno.fname[0])
+        {
+            if (fno.fattrib & AM_DIR)
+            {
+                printf("   <DIR>   %s\r\n",(uint32_t)fno.fname);
+            }
+            else
+            {
+                printf("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
+                send_Message((uint32_t)fno.fname);
+            }
+        }
+    }
+    while (fno.fname[0]);
+
+    send_Message("list_end");
+
     return;
 }
 
@@ -569,22 +661,30 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             //return;
         }
 
+        if (strncmp(&data, "ListDIR",7) == 0) {
+            //list_Directory();
+            app_sched_event_put(&sd_evt, sizeof(sd_evt), list_Directory);
+        }
+
 
         // File transfer
 
         if (strncmp(&data, "EOF",3) == 0) {
             fileTransfer = false;
             transferStarted = false;
+            send_Message("eof");
             printf("\r\nTransfer Completed\r\n");
             transfer_over = true;
             printf("\r\nNumber of reception: %d\r\n", num_received);
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
             memset(filename,'\0', sizeof(filename));
+            
             return;
         }
         
         if (strncmp(&data, "File Transfer",13) == 0) {
+            send_Message("Transfer");
             fileTransfer = true;
             return;
         }
@@ -1049,7 +1149,7 @@ static void uart_init(void)
     app_uart_comm_params_t const comm_params =
     {
         .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = 10,
+        .tx_pin_no    = 6,
         .rts_pin_no   = RTS_PIN_NUMBER,
         .cts_pin_no   = CTS_PIN_NUMBER,
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
@@ -1255,7 +1355,7 @@ int main(void)
     conn_params_init();
     // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
     // fatfs_init();
-    //fatfs_example();
+    // fatfs_example();
     
 
     // Initialize FATFS
@@ -1267,7 +1367,7 @@ int main(void)
 
 
     // Start execution.
-    printf("\r\nUART started.\r\n");
+    printf("\r\n\r\n\r\n\r\nUART started.\r\n");
     NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
 
