@@ -14,17 +14,13 @@ uint8_t get_next_byte(){
     return byte;
 }
 
-MidiEvent get_midi_event(uint8_t statZ){
-    uint8_t stat = statZ;
-    // NOTE: For whatever reason, stat is being overwritten here
-    // NOTE: This is a MAJOR ISSUE!
-    // NOTE: Also, the "MidiEvent m = " line does not ever get run...
+MidiEvent get_midi_event(uint8_t temp){
+    uint8_t stat = temp;
     uint8_t note_info[2] = {0};
     UINT br = 0;
     FRESULT res = f_read(&midi_file.ptr, note_info, 2, &br);
-    uint8_t newnote = note_info[0] -21;
+    uint8_t newnote = note_info[0] - 21;
     uint8_t vel = note_info[1];
-    //printf("Creating MIDI Event with note %d, ID %d, and velocity %d\r\n", newnote, *wtf, vel);
     return (MidiEvent) {.ID = stat, .note=newnote, .velocity=vel};
 }
 
@@ -107,7 +103,7 @@ uint8_t read_next_track_event(){
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
     } else if ((evt & 0xF0) == 0xC0) {
         //printf("MIDI track event.\r\n");
-        uint8_t trash = get_next_byte(); // No clue what this is but causes mass chaos if not removed.    
+        UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.    
     } else {
         UINT loc = f_tell(&midi_file.ptr);
         //printf("WARNING: EVENT @ %d %X NOT KNOWN!\r\n", loc, evt);
@@ -189,37 +185,26 @@ unsigned long init_midi_file(char* filename){
 
     diskio_blockdev_register(drives, ARRAY_SIZE(drives));
 
-    NRF_LOG_INFO("Initializing disk 0 (SDC)...");
     for (uint32_t retries = 3; retries && disk_state; --retries)
     {
         //printf("%x\n", disk_state);
         disk_state = disk_initialize(0);
     }
-    if (disk_state)
- 
+    if (disk_state) 
     {
-      
-        NRF_LOG_INFO("Disk initialization failed.");
         return;
     }
 
     uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
     uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
-    NRF_LOG_INFO("Capacity: %d MB", capacity);
-
-    NRF_LOG_INFO("Mounting volume...");
     ff_result = f_mount(&fs, "", 1);
     if (ff_result)
     {
-        NRF_LOG_INFO("Mount failed.");
-        return;
+            return;
     }
-
-    NRF_LOG_INFO("\r\n Listing directory: /");
     ff_result = f_opendir(&dir, "/");
     if (ff_result)
     {
-        NRF_LOG_INFO("Directory listing failed!");
         return;
     }
 
@@ -228,27 +213,12 @@ unsigned long init_midi_file(char* filename){
         ff_result = f_readdir(&dir, &fno);
         if (ff_result != FR_OK)
         {
-            NRF_LOG_INFO("Directory read failed.");
             return;
-        }
-
-        if (fno.fname[0])
-        {
-            if (fno.fattrib & AM_DIR)
-            {
-                NRF_LOG_RAW_INFO("   <DIR>   %s",(uint32_t)fno.fname);
-            }
-            else
-            {
-                NRF_LOG_RAW_INFO("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
-                printf("Filename: %s\r\n", (uint32_t)fno.fname);
-            }
         }
     }
     while (fno.fname[0]);
 
     endFlag = false;
-
     //TODO Check long file name
     char fn[32];
     strcpy(fn, filename);
