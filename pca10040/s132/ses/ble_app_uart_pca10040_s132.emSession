@@ -82,5 +82,5 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="4" y="659" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/pca10040/s132/ses/leds.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer2.c" selected="0" top="643" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="10" y="88" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/bsp/bsp_btn_ble.c" selected="0" top="72" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="//nas01.itap.purdue.edu/puhome/desktop/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/components/toolchain/cmsis/dsp/Include" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/nas01.itap.purdue.edu/puhome/desktop/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/components/toolchain/cmsis/dsp/Include" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>
