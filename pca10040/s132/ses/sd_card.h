@@ -41,5 +41,6 @@ void fatfs_init ();
 
 void write_to_file (uint8_t* data, int size, char* filename);
 
+void print_error(FRESULT fr);
 
 #endif

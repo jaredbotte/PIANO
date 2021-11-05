@@ -92,7 +92,7 @@ Color led_color     = {.red = 0, .green = 0, .blue = 0};
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
 volatile bool transferStarted = false;
-char filename[64];
+char filename[12];
 
 bool bufferBusy = false;
 
@@ -114,6 +114,8 @@ num_written  = 0;
 
 bool transfer_over = false;
 
+char fileToPlay[12];
+volatile bool playNameChange = false;
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -307,7 +309,8 @@ void file_check(void* p_event_data, uint16_t event_size){
             else
             {
                 printf("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
-                if (strncmp(&fno.fname, "TEST3.MID",9) == 0) {
+                if (strcmp(&fno.fname, filename) == 0) {
+                    // NOTE: This may not work
                     f_unlink(&fno.fname);
                 }
             }
@@ -428,6 +431,17 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 currentMode = PA;
                 stateChanged = true;
             }
+         }
+
+         if (strncmp(&data, "PFILE", 5) == 0) {
+            playNameChange = true;
+            return;
+         }
+
+         if (playNameChange) {
+            // TODO: Make sure this name complies!!
+            strcpy(&fileToPlay, &data);
+            playNameChange = false;
          }
         // End of critical system commands!
 
@@ -552,7 +566,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         }
 
         if (fileTransfer && !transferStarted) {// seting filename
-            strncpy(&filename, &data, size);
+            strncpy(&filename, &data, 11);
             transferStarted = true;
             //printf("File Name: %s\r\n", filename);
             //printf("Filename size: %d\r\n", strlen(filename));
@@ -577,7 +591,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 
                 //strcpy(&(sd_evt.filename), &filename);
                 //printf("Filename: %s\r\n", sd_evt.filename);
-                sd_evt.filename = "TEST3.MID";
+                sd_evt.filename = filename;
                 app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
                 
                 return;      
@@ -1152,12 +1166,12 @@ void midi_operations() {
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
-            UNUSED_PARAMETER(init_midi_file("TEST3.MID"));
+            UNUSED_PARAMETER(init_midi_file(fileToPlay));
             //learn_next_midi_data(&numKeysToPress);
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");
-            midi_delay(init_midi_file("TEST3.MID"));
+            midi_delay(init_midi_file(fileToPlay));
         } 
         else {
             printf("SD? %s\r\n", hasSDCard ? "true" : "false");

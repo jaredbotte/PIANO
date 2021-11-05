@@ -24,8 +24,7 @@ void fatfs_init(){
     }
     if (disk_state)
     {
-        printf("Disk initialize Error!!!!!!\r\n");
-        printf("Error type %d\r\n", ff_result);
+        print_error(ff_result);
         return;
     }
 
@@ -37,7 +36,7 @@ void fatfs_init(){
     if (ff_result)
     {
         printf("Mount failed\r\n");
-        printf("Error type %d\r\n", ff_result);
+        print_error(ff_result);
     }
 
     // Listing directory
@@ -45,7 +44,7 @@ void fatfs_init(){
 
     if (ff_result) {
         printf("Directory listing failed!\r\n");
-        printf("Error type %d\r\n", ff_result);
+        print_error(ff_result);
     }
 
     do {
@@ -53,13 +52,43 @@ void fatfs_init(){
         
         if (ff_result != FR_OK) {
             printf("Directory reading failed!\r\n");
-            printf("Error type %d\r\n", ff_result);
+            print_error(ff_result);
             return;
         }
     }while (fno.fname[0]);
 
     return;
 
+}
+
+void print_error(FRESULT fr)
+{
+    const char *errs[] = {
+            [FR_OK] = "Success",
+            [FR_DISK_ERR] = "Hard error in low-level disk I/O layer",
+            [FR_INT_ERR] = "Assertion failed",
+            [FR_NOT_READY] = "Physical drive cannot work",
+            [FR_NO_FILE] = "File not found",
+            [FR_NO_PATH] = "Path not found",
+            [FR_INVALID_NAME] = "Path name format invalid",
+            [FR_DENIED] = "Permision denied",
+            [FR_EXIST] = "Prohibited access",
+            [FR_INVALID_OBJECT] = "File or directory object invalid",
+            [FR_WRITE_PROTECTED] = "Physical drive is write-protected",
+            [FR_INVALID_DRIVE] = "Logical drive number is invalid",
+            [FR_NOT_ENABLED] = "Volume has no work area",
+            [FR_NO_FILESYSTEM] = "Not a valid FAT volume",
+            [FR_MKFS_ABORTED] = "f_mkfs aborted",
+            [FR_TIMEOUT] = "Unable to obtain grant for object",
+            [FR_LOCKED] = "File locked",
+            [FR_NOT_ENOUGH_CORE] = "File name is too large",
+            [FR_TOO_MANY_OPEN_FILES] = "Too many open files",
+            [FR_INVALID_PARAMETER] = "Invalid parameter",
+    };
+    if (fr < 0 || fr >= sizeof errs / sizeof errs[0])
+        printf("Invalid error\r\n");
+    else
+        printf("%s\r\n", errs[fr]);
 }
 
 void write_to_file (uint8_t* data, int size, char* filename) {
