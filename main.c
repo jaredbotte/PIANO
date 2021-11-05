@@ -55,7 +55,7 @@
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define DEVICE_NAME                     "P.I.A.N.O."                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "P.I.A.N.O"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -80,7 +80,7 @@
 #define BLE_BUF_SIZE                    256
 
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
-#define SCHED_QUEUE_SIZE                10
+#define SCHED_QUEUE_SIZE                20
 
 bool colorChanged   = false;
 bool rChanged       = false;
@@ -170,26 +170,6 @@ void fileWrite(void* p_event_data, uint16_t event_size) {
     DSTATUS disk_state = STA_NOINIT;
     sd_write_evt* evt = (sd_write_evt*) p_event_data;
 
-    // Initialize FATFS disk I/O interface by providing the block device. 
-    static diskio_blkdev_t drives[] =
-    {
-            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
-    };
-
-    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
-
-    for (uint32_t retries = 3; retries && disk_state; --retries)
-    {
-        disk_state = disk_initialize(0);
-    }
-    if (disk_state)
-    {
-        printf("Disk initialization failed.\r\t");
-        return;
-    }
-
-    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
-    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
     ff_result = f_mount(&fs, "", 1);
     if (ff_result)
     {
@@ -254,27 +234,6 @@ void list_Directory (void* p_event_data, uint16_t event_size){
     DSTATUS disk_state = STA_NOINIT;
 
     send_Message("Listing");
-    NRF_LOG_INFO("\r\n Listing directory: /");
-     // Initialize FATFS disk I/O interface by providing the block device. 
-    static diskio_blkdev_t drives[] =
-    {
-            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
-    };
-
-    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
-
-    for (uint32_t retries = 3; retries && disk_state; --retries)
-    {
-        disk_state = disk_initialize(0);
-    }
-    if (disk_state)
-    {
-        printf("Disk initialization failed.\r\t");
-        return;
-    }
-
-    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
-    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
     ff_result = f_mount(&fs, "", 1);
     ff_result = f_opendir(&dir, "/");
     if (ff_result)
@@ -308,6 +267,53 @@ void list_Directory (void* p_event_data, uint16_t event_size){
     while (fno.fname[0]);
 
     send_Message("list_end");
+
+    return;
+}
+
+void file_check(void* p_event_data, uint16_t event_size){
+     static FATFS fs;
+    static DIR dir;
+    static FILINFO fno;
+    static FIL file;
+
+    uint32_t bytes_written;
+    FRESULT ff_result;
+    DSTATUS disk_state = STA_NOINIT;
+
+    ff_result = f_mount(&fs, "", 1);
+    ff_result = f_opendir(&dir, "/");
+    if (ff_result)
+    {
+        printf("Directory listing failed with code %d!\r\n", ff_result);
+        return;
+    }
+
+    do
+    {
+        ff_result = f_readdir(&dir, &fno);
+        if (ff_result != FR_OK)
+        {
+            printf("Directory read failed with code %d.\r\n", ff_result);
+            return;
+        }
+
+        if (fno.fname[0])
+        {
+            if (fno.fattrib & AM_DIR)
+            {
+                printf("   <DIR>   %s\r\n",(uint32_t)fno.fname);
+            }
+            else
+            {
+                printf("%9lu  %s", fno.fsize, (uint32_t)fno.fname);
+                if (strncmp(&fno.fname, "TEST3.MID",9) == 0) {
+                    f_unlink(&fno.fname);
+                }
+            }
+        }
+    }
+    while (fno.fname[0]);
 
     return;
 }
@@ -552,6 +558,8 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             //printf("Filename size: %d\r\n", strlen(filename));
             //printf("Size: %d\r\n", size);
             filename[strlen(filename)-1] = '\0';
+            app_sched_event_put(&sd_evt, sizeof(sd_evt), file_check);
+            
             return;
         }
 
@@ -916,7 +924,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
               else if (currentMode == LTP) {
                 set_key_learn(keyNum, type);
                 if(isNoteFinished(numKeysToPress)){
-                    learn_next_midi_data(&numKeysToPress);
+                    //learn_next_midi_data(&numKeysToPress);
                 }
               }
               noteFlag = 0;
@@ -1145,7 +1153,7 @@ void midi_operations() {
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
             UNUSED_PARAMETER(init_midi_file("TEST3.MID"));
-            learn_next_midi_data(&numKeysToPress);
+            //learn_next_midi_data(&numKeysToPress);
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");
@@ -1183,8 +1191,7 @@ int main(void)
     advertising_init();
     conn_params_init();
     // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
-    // fatfs_init();
-    // fatfs_example();
+    fatfs_init();
 
     // Initializing chip detect pin.
     //nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
@@ -1194,7 +1201,7 @@ int main(void)
     advertising_start();
 
     // LEDs
-    initialize_led_strip(150, 25);
+    initialize_led_strip(176, 25);
     //fill_color(RED);
 
     //midi_delay(init_midi_file("TEST.MID"));

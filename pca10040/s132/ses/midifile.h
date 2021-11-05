@@ -7,7 +7,6 @@
 #include "leds.h"
 #include "arm_math.h"
 
-#define MIDI_EVENT_LIMIT 10
 #define TEMP_DIV 1
 
 typedef struct {

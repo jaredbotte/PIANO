@@ -71,6 +71,7 @@ unsigned long get_variable_data()
 }
 
 uint8_t read_next_track_event(){
+// TODO: USE SWITCH
     uint8_t evt = get_next_byte();
     //printf("Found track event %X\n\r", evt);
     if (evt == 0xFF){
@@ -86,44 +87,38 @@ uint8_t read_next_track_event(){
     } else if (evt == 0xB0){
         //printf("Found B0\r\n");
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
-    } else if ((evt & 0xF0) == 0xC0) {
+    } else if ((evt & 0xF0) == 0xC0 | (evt & 0xF0) == 0xD0) {
         //printf("MIDI track event.\r\n");
         UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.    
+    } else if ((evt & 0xF0) == 0xA0 | (evt & 0xF0) == 0xB0 | (evt & 0xF0) == 0xE0){ 
+        UNUSED_VARIABLE(get_next_byte());
+        UNUSED_VARIABLE(get_next_byte());
+    }else if ((evt& 0xf0) == 0x90 | (evt & 0xf0) == 0x80){
+        //Don't do anything!
     } else {
         UINT loc = f_tell(&midi_file.ptr);
-        //printf("WARNING: EVENT @ %d %X NOT KNOWN!\r\n", loc, evt);
+        printf("%d %X NOT KNOWN!\r\n", loc, evt);
     }
     return evt;
 }
 
 unsigned long read_next_midi_data(){
-    MidiEvent updates[MIDI_EVENT_LIMIT];
-    memset(updates, 0, MIDI_EVENT_LIMIT);
-    int events_read = 0;
     unsigned long delay = 0;
     //printf("Reading next midi data.\r\n");
-    while(!endFlag && delay == 0 && events_read < MIDI_EVENT_LIMIT) {
+    while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
         if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
             evt = (evt&0xF0);
             MidiEvent mevt = get_midi_event(evt);
-            updates[events_read] = mevt;
-            events_read++;
+            if (evt == 0x90) {
+                set_key(mevt.note, 1, BLUE);
+            } else {
+                set_key(mevt.note, 0, OFF);
+            }
         }
         delay = get_variable_data();
-        //printf("delay 2 = %ld\r\n",delay); 
     }
-    
-    // Update leds based on updates
-    //printf("MIDI events read: %d\r\n", events_read);
-    // TODO: For some reason this for loop is still being entered.. why??
-    for(int i = 0; i < events_read; i++){
-        MidiEvent curr = updates[i];
-        int stat = curr.ID == 0x90 ? 1 : 0;
-        //printf("Setting key %d to %d\r\n", curr.note, stat);
-        //set_key_velocity(curr.note, stat, curr.velocity);
-        set_key(curr.note, stat, BLUE);
-    }
+    //printf("delay = %ld\r\n",delay); 
 
     if (endFlag) {
       return -1;
@@ -145,7 +140,8 @@ unsigned long read_next_midi_data(){
 
 void learn_next_midi_data(int* numKeys){
     unsigned long delay = 0;
-    while(!endFlag && delay == 0 && (*numKeys) < MIDI_EVENT_LIMIT) {
+    int events_read = 0;
+    while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
         if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
             evt &= 0xF0;
@@ -185,26 +181,6 @@ unsigned long init_midi_file(char* filename){
     FRESULT ff_result;
     DSTATUS disk_state = STA_NOINIT;
 
-    // Initialize FATFS disk I/O interface by providing the block device. 
-    static diskio_blkdev_t drives[] =
-    {
-            DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
-    };
-
-    diskio_blockdev_register(drives, ARRAY_SIZE(drives));
-
-    for (uint32_t retries = 3; retries && disk_state; --retries)
-    {
-        //printf("%x\n", disk_state);
-        disk_state = disk_initialize(0);
-    }
-    if (disk_state) 
-    {
-        return;
-    }
-
-    uint32_t blocks_per_mb = (1024uL * 1024uL) / m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_size;
-    uint32_t capacity = m_block_dev_sdc.block_dev.p_ops->geometry(&m_block_dev_sdc.block_dev)->blk_count / blocks_per_mb;
     ff_result = f_mount(&fs, "", 1);
     if (ff_result)
     {
