@@ -53,21 +53,6 @@ void get_meta_event(){
     //printf("FP: %X", f_tell(&midi_file.ptr));
 }
 
-/*
-unsigned long get_variable_data(){
-    unsigned long v_data = 0;
-    uint8_t more_bytes;
-    do {
-        v_data <<= 7;
-        uint8_t next_byte = get_next_byte();
-        more_bytes = next_byte & 0x80;
-
-        v_data |= next_byte & 0x7f;
-    } while(more_bytes);
-
-    return v_data;
-}
-*/
 unsigned long get_variable_data()
 {
     unsigned long value;
@@ -156,10 +141,54 @@ unsigned long read_next_midi_data(){
     NVIC_ClearPendingIRQ(FPU_IRQn);
 
     return delay_ms_int;
-
-    //printf("Delay11: %ld\r\n", delay_ms);
-
 }
+
+void learn_next_midi_data(uint8_t* keynums, int* numKeys){
+    // This function needs to return keynums and numKeys. 
+    // We'll need to figure out how to nicely get that information.
+    memset(keynums, 0, MIDI_EVENT_LIMIT);
+    *numKeys = 0;
+    unsigned long delay = 0;
+    while(!endFlag && delay == 0 && (*numKeys) < MIDI_EVENT_LIMIT) {
+        uint8_t evt = (read_next_track_event());
+        if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
+            evt = (evt&0xF0);
+            MidiEvent mevt = get_midi_event(evt);
+            keynums[*numKeys] = mevt.note;
+            (*numKeys)++;
+        }
+        delay = get_variable_data();
+    }
+    
+    // Update leds based on updates
+    //printf("MIDI events read: %d\r\n", events_read);
+    // TODO: For some reason this for loop is still being entered.. why??
+    //for(int i = 0; i < events_read; i++){
+    //    MidiEvent curr = updates[i];
+    //    int stat = curr.ID == 0x90 ? 1 : 0;
+        //printf("Setting key %d to %d\r\n", curr.note, stat);
+        //set_key_velocity(curr.note, stat, curr.velocity);
+    //    set_key(curr.note, stat, BLUE);
+    //}
+
+    if (endFlag) {
+      return -1;
+    }
+
+    double delay_ms = delay * midi_file.mseconds_per_tick;
+    unsigned long delay_ms_int= (unsigned long)delay_ms;
+    //printf("Delaying %ld ms\r\n", delay_ms_int);
+
+    // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
+    uint32_t fpscr_reg = __get_FPSCR();
+    __set_FPSCR(fpscr_reg & ~(0x0000009F));
+    (void) __get_FPSCR();
+    // Clear the pending FPU interrupt. Necessary when the application uses a SoftDevice with sleep modes
+    NVIC_ClearPendingIRQ(FPU_IRQn);
+
+    return delay_ms_int;
+}
+
 
 void start_next_track(){
     UINT br;

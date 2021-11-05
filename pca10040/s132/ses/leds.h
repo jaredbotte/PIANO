@@ -40,5 +40,6 @@ void fill_test();
 void set_led(int led_num, Color color);
 void set_key(int key_num, int stat, Color color);
 void set_key_velocity(int key_num, int stat, int velocity);
+void led_connect_animation();
 
 #endif // __LEDS_H__

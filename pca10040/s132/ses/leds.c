@@ -77,6 +77,11 @@ void fill_color(Color color){
     }
 }
 
+void led_connect_animation(){
+    // Will need to figure out how to delay something so we can make an animation.
+    //fill_color(RED);
+}
+
 void set_led(int led_num, Color color){
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
     for(int i = 0; i < 24; i++){

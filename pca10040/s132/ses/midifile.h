@@ -29,6 +29,7 @@ static MidiFile midi_file;
 
 
 unsigned long read_next_midi_data();
+void learn_next_midi_data();
 MidiEvent get_midi_event(uint8_t stat);
 void get_meta_event();
 unsigned long get_variable_data();
