@@ -900,7 +900,7 @@ void check_learn_status(int keyNum, int type){
     }
 
     if(pressedKeys == correctKeys && correctKeys - numKeys){
-        // get next MIDI data!
+        learn_next_midi_data(&keysToPress, &numKeys);
     }
 }
 
@@ -1170,6 +1170,8 @@ void midi_operations() {
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
+            UNUSED_PARAMETER(init_midi_file("TEST3.MID"));
+            learn_next_midi_data(&keysToPress, &numKeys);
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");
@@ -1179,6 +1181,7 @@ void midi_operations() {
             printf("SD? %s\r\n", hasSDCard ? "true" : "false");
             printf("Now in VIS\r\n");
             currentMode = VIS;
+            fill_color(OFF);
         }
         stateChanged = false;
     }

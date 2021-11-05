@@ -84,10 +84,22 @@ void led_connect_animation(){
 
 void set_led(int led_num, Color color){
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
+    int led_ind = led_num * 24;
     for(int i = 0; i < 24; i++){
-      int led_ind = led_num * 24;
         buffer[led_ind + i] = (((col & (1 << (23 - i))) >> (23 - i)) * 6 + 6) | 0x8000;
     }
+}
+
+Color get_led_color(int led_num){
+    uint32_t col = 0;
+    int led_ind = led_num *24;
+    for(int i = 0; i < 24; i++){
+        uint8_t val = buffer[led_ind + i];
+        val = val == 0x8006 ? 0 : 1;
+        col |= val << i;
+    }
+    printf("Color found: %d\r\n", col);
+    return (Color) {.green = (col >> 16) & 0xff, .red = (col >> 8) & 0Xff, .blue = col & 0xff};
 }
 
 void set_key(int key_num, int stat, Color color){
@@ -119,15 +131,22 @@ void set_key_velocity(int key_num, int stat, int velocity){
 }
 
 void set_key_learn(int key_num, int stat){
-    /*if (correctKey && keyPressed){
-        light key green;
-    } else if (correctKey & !keyPressed){
-        light key blue;
-    } else if (!correctKey & keyPressed) {
-        light key red;
-    } else if (!correctKey & !keyPressed) {
-        light key off;
-    }*/
+    Color curr_col = get_led_color(key_array[key_num].starting_led);
+    if(stat){ // Key must be off or blue
+        if(curr_col.blue == BLUE.blue){
+            set_key(key_num, 1, BLUE);
+        } else {
+            set_key(key_num, 1, RED);
+        }
+    } else { // Key must be green or red
+        if(curr_col.green == GREEN.green){
+            set_key(key_num, 1, BLUE);
+        } else if (curr_col.red == RED.red){
+            set_key(key_num, 1, OFF);
+        } else {
+            set_key(key_num, 1, GOLD); // This indicates a problem.
+        }
+    }
 
 }
 

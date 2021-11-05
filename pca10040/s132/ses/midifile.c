@@ -152,43 +152,29 @@ void learn_next_midi_data(uint8_t* keynums, int* numKeys){
     while(!endFlag && delay == 0 && (*numKeys) < MIDI_EVENT_LIMIT) {
         uint8_t evt = (read_next_track_event());
         if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
-            evt = (evt&0xF0);
+            evt &= 0xF0;
             MidiEvent mevt = get_midi_event(evt);
-            keynums[*numKeys] = mevt.note;
-            (*numKeys)++;
+            if(mevt.ID == 0x90){
+                keynums[*numKeys] = mevt.note;
+                (*numKeys)++;
+            } else {
+                set_key(mevt.note, 0, OFF);
+            }
         }
-        delay = get_variable_data();
+        UNUSED_VARIABLE(get_variable_data());
     }
     
     // Update leds based on updates
-    //printf("MIDI events read: %d\r\n", events_read);
-    // TODO: For some reason this for loop is still being entered.. why??
-    //for(int i = 0; i < events_read; i++){
-    //    MidiEvent curr = updates[i];
-    //    int stat = curr.ID == 0x90 ? 1 : 0;
-        //printf("Setting key %d to %d\r\n", curr.note, stat);
-        //set_key_velocity(curr.note, stat, curr.velocity);
-    //    set_key(curr.note, stat, BLUE);
-    //}
-
-    if (endFlag) {
-      return -1;
+    for(int i = 0; i < *numKeys; i++){
+        int curr = keynums[i];
+        set_key(curr, 1, BLUE);
     }
 
-    double delay_ms = delay * midi_file.mseconds_per_tick;
-    unsigned long delay_ms_int= (unsigned long)delay_ms;
-    //printf("Delaying %ld ms\r\n", delay_ms_int);
-
-    // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
-    uint32_t fpscr_reg = __get_FPSCR();
-    __set_FPSCR(fpscr_reg & ~(0x0000009F));
-    (void) __get_FPSCR();
-    // Clear the pending FPU interrupt. Necessary when the application uses a SoftDevice with sleep modes
-    NVIC_ClearPendingIRQ(FPU_IRQn);
-
-    return delay_ms_int;
+    if (endFlag) {
+      //return -1;
+      // TODO: Pass this information along?
+    }
 }
-
 
 void start_next_track(){
     UINT br;
@@ -199,7 +185,7 @@ void start_next_track(){
 }
 
 unsigned long init_midi_file(char* filename){
-   static FATFS fs;
+    static FATFS fs;
     static DIR dir;
     static FILINFO fno;
     static FIL file;
