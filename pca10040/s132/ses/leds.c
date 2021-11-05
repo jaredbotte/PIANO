@@ -5,10 +5,10 @@
 #include "nrf.h"
 #include "nrf_delay.h" // leds, uart
 
-#define PIANO_LEDS_START 6
-
 int num_leds;
 int led_pin;
+int keysPressed;
+int incorrectKeys;
 uint16_t* buffer;
 Key* key_array;
 
@@ -77,6 +77,13 @@ void fill_color(Color color){
     }
 }
 
+bool isNoteFinished(int keysToPress){
+    if(keysPressed == keysToPress && incorrectKeys == 0){
+        return true;
+    }
+    return false;
+}
+
 void led_connect_animation(){
     // Will need to figure out how to delay something so we can make an animation.
     //fill_color(RED);
@@ -96,10 +103,14 @@ Color get_led_color(int led_num){
     for(int i = 0; i < 24; i++){
         uint8_t val = buffer[led_ind + i];
         val = val == 0x8006 ? 0 : 1;
-        col |= val << i;
+        col |= val << (23 - i);
     }
     printf("Color found: %d\r\n", col);
     return (Color) {.green = (col >> 16) & 0xff, .red = (col >> 8) & 0Xff, .blue = col & 0xff};
+}
+
+Color get_key_color(int key_num){
+    return get_led_color(key_array[key_num].starting_led);
 }
 
 void set_key(int key_num, int stat, Color color){
@@ -130,28 +141,45 @@ void set_key_velocity(int key_num, int stat, int velocity){
     }
 }
 
+bool areSameColor(Color a, Color b){
+    if(a.blue != b.blue){
+        return false;
+    }
+    if(a.green != b.green){
+        return false;
+    }
+    if(a.red != b.red){
+        return false;
+    }
+    return true;
+}  
+
 void set_key_learn(int key_num, int stat){
-    Color curr_col = get_led_color(key_array[key_num].starting_led);
+    Color curr_col = get_key_color(key_num);
     if(stat){ // Key must be off or blue
-        if(curr_col.blue == BLUE.blue){
-            set_key(key_num, 1, BLUE);
+        keysPressed++;
+        if(areSameColor(curr_col, BLUE)){
+            set_key(key_num, 1, GREEN);
         } else {
             set_key(key_num, 1, RED);
+            incorrectKeys++;
         }
     } else { // Key must be green or red
-        if(curr_col.green == GREEN.green){
+        keysPressed--;
+        if(areSameColor(curr_col, GREEN)){
             set_key(key_num, 1, BLUE);
-        } else if (curr_col.red == RED.red){
+        } else if (areSameColor(curr_col, RED)){
             set_key(key_num, 1, OFF);
+            incorrectKeys--;
         } else {
             set_key(key_num, 1, GOLD); // This indicates a problem.
         }
     }
-
 }
 
 void set_key_play(int key_num, int stat){
-
+    // NOTE: We can make this do something if we want.
+    // This function is called in PA Mode when a key is pressed.
 }
 
 
@@ -168,7 +196,7 @@ void fill_test(){
 }
 
 void initialize_led_strip(int num, int pin){
-    int num_keys = 88; // Todo take this in as an argument
+    int num_keys = 88; // TODO: take this in as an argument
     num_leds = num;
     led_pin = pin;
     buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
@@ -183,11 +211,10 @@ void initialize_led_strip(int num, int pin){
     setup_led_pwm_dma();
     fill_color((Color) {.red=0, .green=0, .blue=0});
     start_timer();
-    //fill_test();
 
-    //Init onboard LEDs
-    NRF_GPIO -> DIR |= (3 << PIANO_LEDS_START);
-    NRF_GPIO -> OUTSET |= (1 << PIANO_LEDS_START + 1);
+    keysPressed = 0; // TODO: Set to zero on LTP MODE Entry. Make sure it's never negative.
+    incorrectKeys = 0;
+    //fill_test();
 }
 
 /*

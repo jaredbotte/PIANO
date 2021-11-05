@@ -143,11 +143,7 @@ unsigned long read_next_midi_data(){
     return delay_ms_int;
 }
 
-void learn_next_midi_data(uint8_t* keynums, int* numKeys){
-    // This function needs to return keynums and numKeys. 
-    // We'll need to figure out how to nicely get that information.
-    memset(keynums, 0, MIDI_EVENT_LIMIT);
-    *numKeys = 0;
+void learn_next_midi_data(int* numKeys){
     unsigned long delay = 0;
     while(!endFlag && delay == 0 && (*numKeys) < MIDI_EVENT_LIMIT) {
         uint8_t evt = (read_next_track_event());
@@ -155,21 +151,16 @@ void learn_next_midi_data(uint8_t* keynums, int* numKeys){
             evt &= 0xF0;
             MidiEvent mevt = get_midi_event(evt);
             if(mevt.ID == 0x90){
-                keynums[*numKeys] = mevt.note;
+                set_key(mevt.note, 1, BLUE);
                 (*numKeys)++;
             } else {
                 set_key(mevt.note, 0, OFF);
+                (*numKeys)--;
             }
         }
         UNUSED_VARIABLE(get_variable_data());
     }
     
-    // Update leds based on updates
-    for(int i = 0; i < *numKeys; i++){
-        int curr = keynums[i];
-        set_key(curr, 1, BLUE);
-    }
-
     if (endFlag) {
       //return -1;
       // TODO: Pass this information along?

@@ -141,10 +141,7 @@ static uint8_t lastEvent = 0;
 static uint8_t keyNum = 0x00;
 
 
-uint8_t keysToPress[MIDI_EVENT_LIMIT] = {0};
-int numKeys = 0;
-int correctKeys = 0;
-int pressedKeys = 0;
+int numKeysToPress = 0;
 
 void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
@@ -879,31 +876,6 @@ void bsp_event_handler(bsp_event_t event)
     }
 }
 
-void check_learn_status(int keyNum, int type){
-    bool isCorrect = false;
-    for(int i = 0; i < numKeys; i++){
-        if(keyNum == keysToPress[i]){
-            isCorrect = true;
-        }
-    }
-
-    if(type) {
-        pressedKeys++;
-        if(isCorrect){
-            correctKeys++;
-        }
-    } else {
-        pressedKeys--;
-        if(isCorrect){
-            correctKeys--;
-        }
-    }
-
-    if(pressedKeys == correctKeys && correctKeys - numKeys){
-        learn_next_midi_data(&keysToPress, &numKeys);
-    }
-}
-
 /**@brief   Function for handling app_uart events.
  *
  * @details This function will receive a single character from the app_uart module and append it to
@@ -943,7 +915,9 @@ void uart_event_handle(app_uart_evt_t * p_event)
               } 
               else if (currentMode == LTP) {
                 set_key_learn(keyNum, type);
-                check_learn_status(keyNum, type);
+                if(isNoteFinished(numKeysToPress)){
+                    learn_next_midi_data(&numKeysToPress);
+                }
               }
               noteFlag = 0;
             }
@@ -1171,7 +1145,7 @@ void midi_operations() {
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
             UNUSED_PARAMETER(init_midi_file("TEST3.MID"));
-            learn_next_midi_data(&keysToPress, &numKeys);
+            learn_next_midi_data(&numKeysToPress);
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");

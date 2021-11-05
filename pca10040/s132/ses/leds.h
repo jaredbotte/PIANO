@@ -38,9 +38,12 @@ void update_led_strip();
 void fill_color(Color color);
 void fill_test();
 void set_led(int led_num, Color color);
+Color get_key_color(int key_num);
 void set_key(int key_num, int stat, Color color);
 void set_key_velocity(int key_num, int stat, int velocity);
 void led_connect_animation();
 Color get_led_color(int led_num);
+bool areSameColor(Color a, Color b);
+bool isNoteFinished(int keysToPress);
 
 #endif // __LEDS_H__
