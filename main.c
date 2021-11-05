@@ -938,7 +938,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
               else if (currentMode == LTP) {
                 set_key_learn(keyNum, type);
                 if(isNoteFinished(numKeysToPress)){
-                    //learn_next_midi_data(&numKeysToPress);
+                    learn_next_midi_data(&numKeysToPress);
                 }
               }
               noteFlag = 0;
@@ -1167,7 +1167,7 @@ void midi_operations() {
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
-            //learn_next_midi_data(&numKeysToPress);
+            learn_next_midi_data(&numKeysToPress);
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");
@@ -1215,7 +1215,7 @@ int main(void)
     advertising_start();
 
     // LEDs
-    initialize_led_strip(176, 25);
+    initialize_led_strip(288, 25);
     //fill_color(RED);
 
     //midi_delay(init_midi_file("TEST.MID"));

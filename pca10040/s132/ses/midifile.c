@@ -27,6 +27,7 @@ MidiEvent get_midi_event(uint8_t temp){
 void get_meta_event(){
     uint8_t meta_type = get_next_byte();
     unsigned long length = get_variable_data();
+    printf("Length rcvd: %x\r\n", length);
     if(meta_type == 0x2F){ // End of track
         if (f_tell(&midi_file.ptr) < f_size(&midi_file.ptr)) {
           start_next_track();
@@ -79,36 +80,36 @@ uint8_t read_next_track_event(){
     } else if (evt == 0xF0){
         //printf("Found some text.\r\n");
         unsigned long len = get_variable_data();
+        printf("Length rcvd:%x\r\n",len);
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len + 1);
     } else if (evt == 0xF7){
         //printf("Found some stuff. Skipping it.\r\n");
         unsigned long len = get_variable_data();
+        printf("Length rcvd:%x\r\n",len);
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
-    } else if (evt == 0xB0){
-        //printf("Found B0\r\n");
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
-    } else if ((evt & 0xF0) == 0xC0 | (evt & 0xF0) == 0xD0) {
+    }  else if ((evt & 0xF0) == 0xC0 | (evt & 0xF0) == 0xD0) {
         //printf("MIDI track event.\r\n");
-        UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.    
+        //UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.
+        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 1);
     } else if ((evt & 0xF0) == 0xA0 | (evt & 0xF0) == 0xB0 | (evt & 0xF0) == 0xE0){ 
-        UNUSED_VARIABLE(get_next_byte());
-        UNUSED_VARIABLE(get_next_byte());
+        //UNUSED_VARIABLE(get_next_byte());
+        //UNUSED_VARIABLE(get_next_byte());
+        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
     }else if ((evt& 0xf0) == 0x90 | (evt & 0xf0) == 0x80){
         //Don't do anything!
     } else {
         UINT loc = f_tell(&midi_file.ptr);
-        printf("%d %X NOT KNOWN!\r\n", loc, evt);
+        printf("%x %X NOT KNOWN!\r\n", loc, evt);
     }
     return evt;
 }
 
 unsigned long read_next_midi_data(){
     unsigned long delay = 0;
-    //printf("Reading next midi data.\r\n");
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
-        if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
-            evt = (evt&0xF0);
+        evt &= 0xF0;
+        if (evt == 0x90 || evt == 0x80) {
             MidiEvent mevt = get_midi_event(evt);
             if (evt == 0x90) {
                 set_key(mevt.note, 1, BLUE);
@@ -118,7 +119,6 @@ unsigned long read_next_midi_data(){
         }
         delay = get_variable_data();
     }
-    //printf("delay = %ld\r\n",delay); 
 
     if (endFlag) {
       return -1;
@@ -140,13 +140,12 @@ unsigned long read_next_midi_data(){
 
 void learn_next_midi_data(int* numKeys){
     unsigned long delay = 0;
-    int events_read = 0;
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
-        if ((evt & 0xF0) == 0x90 || (evt & 0xF0) == 0x80) {
-            evt &= 0xF0;
+        evt &= 0xF0;
+        if (evt == 0x90 || evt == 0x80) {
             MidiEvent mevt = get_midi_event(evt);
-            if(mevt.ID == 0x90){
+            if(evt == 0x90){
                 set_key(mevt.note, 1, BLUE);
                 (*numKeys)++;
             } else {
@@ -154,7 +153,8 @@ void learn_next_midi_data(int* numKeys){
                 (*numKeys)--;
             }
         }
-        UNUSED_VARIABLE(get_variable_data());
+        delay = get_variable_data();
+        //f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + get_variable_data());
     }
     
     if (endFlag) {
@@ -169,6 +169,7 @@ void start_next_track(){
     uint8_t trkhead[8] = {0}; // 'MTrk' = 4, length = 4 | total 8
     FRESULT ff_result = f_read(&midi_file.ptr, trkhead, 8, &br);
     printf("Read track header. Start: %X End: %X\r\n", trkhead[0], trkhead[7]);
+    printf("File ptr loc: %x\r\n",f_tell(&midi_file.ptr));
 }
 
 unsigned long init_midi_file(char* filename){

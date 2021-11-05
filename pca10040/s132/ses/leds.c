@@ -101,7 +101,7 @@ Color get_led_color(int led_num){
     uint32_t col = 0;
     int led_ind = led_num *24;
     for(int i = 0; i < 24; i++){
-        uint8_t val = buffer[led_ind + i];
+        uint16_t val = buffer[led_ind + i];
         if(val == 0x8006){
             val = 0;
         } else {
@@ -150,12 +150,25 @@ void set_key_velocity(int key_num, int stat, int velocity){
 }
 
 bool areSameColor(Color a, Color b){
-    return !memcmp(&a, &b);
+    //return !memcmp(&a, &b);
+    if (a.red != b.red) {
+        return false;
+    }
+
+    if (a.green != b.green) {
+        return false;
+    }
+
+    if (a.blue != b.blue) {
+        return false;
+    }
+
+    return true;
 }  
 
 void set_key_learn(int key_num, int stat){
     Color curr_col = get_key_color(key_num);
-    if(stat){ // Key must be off or blue
+    if(stat == 1){ // Key must be off or blue
         keysPressed++;
         if(areSameColor(curr_col, BLUE)){
             set_key(key_num, 1, GREEN);
@@ -170,7 +183,11 @@ void set_key_learn(int key_num, int stat){
         } else if (areSameColor(curr_col, RED)){
             set_key(key_num, 1, OFF);
             incorrectKeys--;
-        } else {
+        }
+        else if (areSameColor(curr_col, OFF)){
+            set_key(key_num, 1, OFF); 
+        }
+        else {
             set_key(key_num, 1, GOLD); // This indicates a problem.
         }
     }
