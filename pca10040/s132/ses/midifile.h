@@ -7,8 +7,6 @@
 #include "leds.h"
 #include "arm_math.h"
 
-#define TEMP_DIV 1
-
 typedef struct {
     uint8_t ID;
     uint8_t note;
@@ -21,7 +19,7 @@ typedef struct {
     uint16_t numTracks;
     uint16_t division;
     double mseconds_per_tick;
-    uint32_t tempo; // uS/qn
+    float tempo; // uS/qn
 } MidiFile;
 
 static MidiFile midi_file;
@@ -35,3 +33,4 @@ unsigned long get_variable_data();
 uint8_t get_next_byte();
 unsigned long init_midi_file(char* filename);
 void start_next_track();
+void setTempoDiv(float div);

@@ -82,6 +82,7 @@
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
 #define SCHED_QUEUE_SIZE                20
 
+bool tempoChanged       = false;
 bool colorChanged   = false;
 bool rChanged       = false;
 bool gChanged       = false;
@@ -424,6 +425,19 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 currentMode = LTP;
                 stateChanged = true;
             }   
+         }
+
+         if (strncmp(&data, "TEMPO", 5) == 0) {
+            tempoChanged = true;
+            return;
+         }
+    
+         if (tempoChanged == true){
+            data[strlen(data) - 1] = '\0';
+            printf("data: %s\r\n", data);
+            printf("Converted data: %f\r\n", strtof(&data));
+            setTempoDiv(atof(&data));
+            tempoChanged = false;
          }
 
          if (strncmp(&data, "PA", 2) == 0) {
@@ -1166,6 +1180,8 @@ void midi_operations() {
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
+            numKeysToPress = 0;
+            reset_ltp();
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
             learn_next_midi_data(&numKeysToPress);
         } 

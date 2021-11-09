@@ -18,6 +18,10 @@ void PWM0_IRQHandler(){
    while(NRF_PWM0 -> EVENTS_SEQEND[0]); // Wait for the interrupt to be cleared
 }
 
+void reset_ltp(){
+    keysPressed = 0;
+    incorrectKeys = 0;
+}
 
 void start_timer(void)
 {		
@@ -187,7 +191,9 @@ void set_key_learn(int key_num, int stat){
         else if (areSameColor(curr_col, OFF)){
             set_key(key_num, 1, OFF); 
         }
-        else {
+        else if (areSameColor(curr_col, BLUE)){
+            set_key(key_num, 1, BLUE);
+        }else {
             set_key(key_num, 1, GOLD); // This indicates a problem.
         }
     }

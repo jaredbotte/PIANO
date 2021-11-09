@@ -45,5 +45,6 @@ void led_connect_animation();
 Color get_led_color(int led_num);
 bool areSameColor(Color a, Color b);
 bool isNoteFinished(int keysToPress);
+void reset_ltp();
 
 #endif // __LEDS_H__

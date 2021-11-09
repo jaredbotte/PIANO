@@ -5,6 +5,7 @@
 
 bool endFlag = false;
 typedef enum states{VIS, LTP, PA}Mode;
+float tempoDiv = 1.0;
 extern currentMode;
 
 uint8_t get_next_byte(){
@@ -22,6 +23,13 @@ MidiEvent get_midi_event(uint8_t temp){
     uint8_t newnote = note_info[0] - 21;
     uint8_t vel = note_info[1];
     return (MidiEvent) {.ID = stat, .note=newnote, .velocity=vel};
+}
+
+void setTempoDiv(float div){
+    if(div != 0){
+        tempoDiv = div;
+        printf("Set tempoDiv to %f\r\n", div);
+    }
 }
 
 void get_meta_event(){
@@ -45,8 +53,9 @@ void get_meta_event(){
         UINT br;
         f_read(&midi_file.ptr, tempodat, length, &br);
         midi_file.tempo = (tempodat[0] << 16) | (tempodat[1] << 8) | tempodat[2]; 
-        midi_file.tempo /= TEMP_DIV;
+        midi_file.tempo *= tempoDiv;
         midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
+        //printf("ms/tick: %f\r\n", midi_file.mseconds_per_tick);
     } else {
         //printf("skipping meta event %X with length %X\r\n", meta_type, length);
         FRESULT res = f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + length);
@@ -225,8 +234,9 @@ unsigned long init_midi_file(char* filename){
     midi_file.format = header[8] << 8 | header[9];
     midi_file.numTracks = header[10] << 8 | header[11];
     midi_file.division = header[12] << 8 | header[13];
-    midi_file.tempo = 500000 / TEMP_DIV; // 120 BPM
+    midi_file.tempo = 500000 / tempoDiv; // 120 BPM
     midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000.;
+    printf("ms/tick: %f\r\n", midi_file.mseconds_per_tick);
     //printf("Tempo: %ld\r\n",  midi_file.tempo);
    // printf("Division: %ld\r\n",  midi_file.division);
     
