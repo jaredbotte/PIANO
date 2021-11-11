@@ -435,7 +435,21 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
          if (tempoChanged == true){
             data[strlen(data) - 1] = '\0';
             printf("data: %s\r\n", data);
-            printf("Converted data: %f\r\n", strtof(&data));
+            printf("Converted data: %f\r\n", strtof(&data, NULL));
+            float div;
+            float ones = (float)atoi(&data[0]);
+            printf("Ones value: %f\r\n", ones);
+            printf("Int %d\r\n", atoi(&data[0]));
+            float tenths = (float)(atoi(&data[2]))/10.;
+            printf("Tenth value: %f\r\n", tenths);
+            float hundredth = 0;
+            if (data[3] != '\0') {
+              hundredth = (float)(atoi(&data[3]))/100.;
+            }
+            printf("Hundredth value: %f\r\n", hundredth);
+            div = ones + tenths + hundredth;
+            printf("Div value: %f\r\n", div);
+
             setTempoDiv(atof(&data));
             tempoChanged = false;
          }
