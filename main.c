@@ -388,6 +388,30 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
+float stupid_atof (char* msg) {
+  if (strlen(msg) < 3)
+    return -1.0;
+
+  char val[3];
+
+  val[0] = msg[0];
+  val[1] = msg[2];
+
+  if (msg[3] != '\0') {
+    val[2] = msg[3];
+  }
+  else {
+    val[2] = '0';
+  }
+
+  int int_val = atoi(&val);
+  float f_val = (float)(int_val/100.);
+
+  return f_val;
+}
+
+
+
 /**@brief Function for handling the data from the Nordic UART Service.
  *
  * @details This function will process the data received from the Nordic UART BLE Service and send
@@ -435,22 +459,10 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
          if (tempoChanged == true){
             data[strlen(data) - 1] = '\0';
             printf("data: %s\r\n", data);
-            printf("Converted data: %f\r\n", strtof(&data, NULL));
-            float div;
-            float ones = (float)atoi(&data[0]);
-            printf("Ones value: %f\r\n", ones);
-            printf("Int %d\r\n", atoi(&data[0]));
-            float tenths = (float)(atoi(&data[2]))/10.;
-            printf("Tenth value: %f\r\n", tenths);
-            float hundredth = 0;
-            if (data[3] != '\0') {
-              hundredth = (float)(atoi(&data[3]))/100.;
-            }
-            printf("Hundredth value: %f\r\n", hundredth);
-            div = ones + tenths + hundredth;
-            printf("Div value: %f\r\n", div);
+            printf("Converted data: %f\r\n", stupid_atof(&data));
+        
 
-            setTempoDiv(atof(&data));
+            setTempoDiv(stupid_atof(&data));
             tempoChanged = false;
          }
 
