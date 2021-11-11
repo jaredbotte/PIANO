@@ -53,7 +53,7 @@ void get_meta_event(){
         UINT br;
         f_read(&midi_file.ptr, tempodat, length, &br);
         midi_file.tempo = (tempodat[0] << 16) | (tempodat[1] << 8) | tempodat[2]; 
-        midi_file.tempo *= tempoDiv;
+        midi_file.tempo /= tempoDiv;
         midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
         //printf("ms/tick: %f\r\n", midi_file.mseconds_per_tick);
     } else {
@@ -234,7 +234,7 @@ unsigned long init_midi_file(char* filename){
     midi_file.format = header[8] << 8 | header[9];
     midi_file.numTracks = header[10] << 8 | header[11];
     midi_file.division = header[12] << 8 | header[13];
-    midi_file.tempo = 500000 / tempoDiv; // 120 BPM
+    midi_file.tempo = 500000 * tempoDiv; // 120 BPM
     midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000.;
     printf("ms/tick: %f\r\n", midi_file.mseconds_per_tick);
     //printf("Tempo: %ld\r\n",  midi_file.tempo);

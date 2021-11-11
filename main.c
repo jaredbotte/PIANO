@@ -55,7 +55,7 @@
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define DEVICE_NAME                     "P.I.A.N.O"                               /**< Name of device. Will be included in the advertising data. */
+//#define DEVICE_NAME                     "P.I.A.N.O"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -346,6 +346,8 @@ static void timers_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+char device_name[18];
+
 /**@brief Function for the GAP initialization.
  *
  * @details This function will set up all the necessary GAP (Generic Access Profile) parameters of
@@ -353,6 +355,9 @@ static void timers_init(void)
  */
 static void gap_params_init(void)
 {
+    // Let's determine the device "unique" name.
+
+    sprintf(&device_name, "P.I.A.N.O. %x", NRF_FICR -> DEVICEID[0]);
     uint32_t                err_code;
     ble_gap_conn_params_t   gap_conn_params;
     ble_gap_conn_sec_mode_t sec_mode;
@@ -360,8 +365,8 @@ static void gap_params_init(void)
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
     err_code = sd_ble_gap_device_name_set(&sec_mode,
-                                          (const uint8_t *) DEVICE_NAME,
-                                          strlen(DEVICE_NAME));
+                                          (const uint8_t *) device_name,
+                                          strlen(device_name));
     APP_ERROR_CHECK(err_code);
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
@@ -1238,7 +1243,7 @@ int main(void)
     uart_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
-    buttons_leds_init(&erase_bonds);
+    //buttons_leds_init(&erase_bonds);
     power_management_init();
     ble_stack_init();
     gap_params_init();

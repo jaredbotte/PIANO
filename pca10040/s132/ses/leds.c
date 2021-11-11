@@ -114,7 +114,7 @@ Color get_led_color(int led_num){
         col <<= 1;
         col |= val;
     }
-    printf("Color found: %d\r\n", col);
+    //printf("Color found: %d\r\n", col);
     return (Color) {.green = (col >> 16) & 0xff, .red = (col >> 8) & 0Xff, .blue = col & 0xff};
 }
 
