@@ -463,8 +463,8 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
     
          if (tempoChanged == true){
             data[strlen(data) - 1] = '\0';
-            printf("data: %s\r\n", data);
-            printf("Converted data: %f\r\n", stupid_atof(&data));
+            //printf("data: %s\r\n", data);
+            //printf("Converted data: %f\r\n", stupid_atof(&data));
         
 
             setTempoDiv(stupid_atof(&data));
@@ -984,6 +984,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
                 set_key_learn(keyNum, type);
                 if(isNoteFinished(numKeysToPress)){
                     learn_next_midi_data(&numKeysToPress);
+                    //printf("keys to press: %d\r\n", numKeysToPress);
                 }
               }
               noteFlag = 0;
@@ -1173,7 +1174,7 @@ static void midi_delay_done_handler(void* p_context){
     UNUSED_PARAMETER(p_context);
     //app_sched_event_put(&sd_evt, sizeof(sd_evt), midi_scheduled_event);
     unsigned long next_delay_ms = read_next_midi_data();
-    //printf("Delaying %d ms\r\n", next_delay_ms);
+    printf("Delaying %d ms\r\n", next_delay_ms);
     midi_delay(next_delay_ms); 
 }
 

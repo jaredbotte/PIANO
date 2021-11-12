@@ -35,7 +35,7 @@ void setTempoDiv(float div){
 void get_meta_event(){
     uint8_t meta_type = get_next_byte();
     unsigned long length = get_variable_data();
-    printf("Length rcvd: %x\r\n", length);
+    //printf("Length rcvd: %x\r\n", length);
     if(meta_type == 0x2F){ // End of track
         if (f_tell(&midi_file.ptr) < f_size(&midi_file.ptr)) {
           start_next_track();
@@ -56,7 +56,7 @@ void get_meta_event(){
         midi_file.tempo /= tempoDiv;
         midi_file.mseconds_per_tick = (midi_file.tempo / midi_file.division) / 1000;
         //printf("ms/tick: %f\r\n", midi_file.mseconds_per_tick);
-    } else {
+    }else {
         //printf("skipping meta event %X with length %X\r\n", meta_type, length);
         FRESULT res = f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + length);
     }
@@ -90,7 +90,7 @@ uint8_t read_next_track_event(){
         //printf("Found some text.\r\n");
         unsigned long len = get_variable_data();
         printf("Length rcvd:%x\r\n",len);
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len + 1);
+        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
     } else if (evt == 0xF7){
         //printf("Found some stuff. Skipping it.\r\n");
         unsigned long len = get_variable_data();
@@ -106,7 +106,7 @@ uint8_t read_next_track_event(){
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
     }else if ((evt& 0xf0) == 0x90 | (evt & 0xf0) == 0x80){
         //Don't do anything!
-    } else {
+    }else {
         UINT loc = f_tell(&midi_file.ptr);
         printf("%x %X NOT KNOWN!\r\n", loc, evt);
     }
@@ -155,10 +155,13 @@ void learn_next_midi_data(int* numKeys){
         if (evt == 0x90 || evt == 0x80) {
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90){
+                if(!areSameColor(get_key_color(mevt.note), GREEN)){
+                    (*numKeys)++;
+                }
                 set_key(mevt.note, 1, BLUE);
-                (*numKeys)++;
             } else {
-                set_key(mevt.note, 0, OFF);
+                set_key(mevt.note, 0, RED);
+                addIncorrect();
                 (*numKeys)--;
             }
         }

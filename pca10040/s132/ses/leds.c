@@ -23,6 +23,10 @@ void reset_ltp(){
     incorrectKeys = 0;
 }
 
+void addIncorrect(){
+    incorrectKeys++;
+}
+
 void start_timer(void)
 {		
   NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
@@ -189,7 +193,8 @@ void set_key_learn(int key_num, int stat){
             incorrectKeys--;
         }
         else if (areSameColor(curr_col, OFF)){
-            set_key(key_num, 1, OFF); 
+            set_key(key_num, 1, OFF);
+            incorrectKeys--;
         }
         else if (areSameColor(curr_col, BLUE)){
             set_key(key_num, 1, BLUE);
@@ -197,6 +202,12 @@ void set_key_learn(int key_num, int stat){
             set_key(key_num, 1, GOLD); // This indicates a problem.
         }
     }
+    if(incorrectKeys > keysPressed){
+        incorrectKeys = keysPressed;
+        // TODO: This is a terrible assumption! But... there's currently not a better option
+        //NOTE: I think this is occuring when a note is both turned on and off during the same midi event timeline.
+    }
+    //printf("Num keys pressed: %d\r\nIncorrect: %d\r\n", keysPressed, incorrectKeys);
 }
 
 void set_key_play(int key_num, int stat){
