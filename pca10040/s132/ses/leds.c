@@ -71,8 +71,20 @@ static void setup_key_array(int num_keys){
     int key_led = 0;
     int width = 2; // For now we'll make each key two LEDs wide. Actually pretty darn close!
     for(int k = 0; k < num_keys; k++){
+        if(k == 88 - 16){
+            key_led--;
+        }
         key_array[k] = (Key) {.starting_led = key_led, .num_led = width};
         key_led += width;
+    }
+}
+
+static void setup_key_array_rev(int num_keys){
+    int key_led = 288;
+    int width = 2;
+    for(int k = num_keys; k > 0; k--){
+        key_array[k-1] = (Key) {.starting_led = key_led - width, .num_led = width};
+        key_led -= width;
     }
 }
 
@@ -239,6 +251,7 @@ void initialize_led_strip(int num, int pin){
     }
     key_array = malloc(sizeof(*key_array) * num_keys);
     setup_key_array(num_keys);
+    //setup_key_array_rev(num_keys);
     for(int i = num_leds * 24; i < num_leds * 24 + 40; i++){
         buffer[i] = 0x8000;
     }

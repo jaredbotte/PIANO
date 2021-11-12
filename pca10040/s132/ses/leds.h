@@ -36,6 +36,7 @@ typedef struct _Key {
 static void setup_led_pwm_dma();
 static void setup_led_refresh(int rate_hz);
 static void setup_key_array(int num_keys);
+static void setup_key_array_rev(int num_keys);
 static void fill_buffer(uint16_t* buffer);
 static void fill_buffer_color(uint16_t* buffer, uint32_t curr_col);
 static void fill_buffer_reset(uint16_t* buffer);
