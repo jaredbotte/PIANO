@@ -9,38 +9,36 @@
  * This application uses the @ref srvlib_conn_params module.
  */
 
-#include <stdbool.h> // Needed for UART
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "nordic_common.h" // ble
-#include "nrf.h" // both
-#include "bsp.h" // fatfs
-#include "ff.h" // fatfs
-#include "diskio_blkdev.h" // fatfs
-#include "nrf_block_dev_sdc.h" // fatfs
-#include "ble_hci.h" // ble
-#include "ble_advdata.h" // ble
-#include "ble_advertising.h"// ble
-#include "ble_conn_params.h" // ble
-#include "nrf_sdh.h" // ble
-#include "nrf_sdh_soc.h" // ble
-#include "nrf_sdh_ble.h" // ble
-#include "nrf_ble_gatt.h" // ble
-#include "nrf_ble_qwr.h" // ble
-#include "app_timer.h" // ble
-#include "ble_nus.h" // ble
-#include "app_uart.h" // ble
-#include "app_util_platform.h" // ble
-#include "bsp_btn_ble.h" // ble
-#include "nrf_pwr_mgmt.h" // ble
-#include "leds.h" // leds
-#include "nrf_delay.h" // leds, uart
-#include "app_error.h" //uart
+#include "nordic_common.h"
+#include "nrf.h"
+#include "ff.h"
+#include "diskio_blkdev.h"
+#include "nrf_block_dev_sdc.h"
+#include "ble_hci.h"
+#include "ble_advdata.h"
+#include "ble_advertising.h"
+#include "ble_conn_params.h"
+#include "nrf_sdh.h"
+#include "nrf_sdh_soc.h"
+#include "nrf_sdh_ble.h"
+#include "nrf_ble_gatt.h"
+#include "nrf_ble_qwr.h"
+#include "app_timer.h"
+#include "ble_nus.h"
+#include "app_uart.h"
+#include "app_util_platform.h"
+#include "nrf_pwr_mgmt.h"
+#include "leds.h"
+#include "nrf_delay.h"
+#include "app_error.h"
 #include "sd_card.h"
 #include "app_scheduler.h"
 #include "midifile.h"
 
-// BLE
+// UART
 #if defined (UART_PRESENT)
 #include "nrf_uart.h"
 #endif
@@ -54,16 +52,10 @@
 
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
-
-//#define DEVICE_NAME                     "P.I.A.N.O"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
-
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
-
 #define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
-
 #define APP_ADV_DURATION                0                                           /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
-
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
 #define SLAVE_LATENCY                   0                                           /**< Slave latency. */
@@ -71,52 +63,44 @@
 #define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                       /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(30000)                      /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                           /**< Number of attempts before giving up the connection parameter negotiation. */
-
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
-
 #define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
-
 #define BLE_BUF_SIZE                    256
-
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
 #define SCHED_QUEUE_SIZE                20
 
-bool tempoChanged       = false;
+//Globals
+sd_write_evt sd_evt;
+sd_write_buffer sd_data_buffer = {.length = 0, .data = {0x00}};
+Color led_color     = {.red = 0, .green = 0, .blue = 0};
+typedef enum states{VIS, LTP, PA}Mode;
+bool tempoChanged   = false;
 bool colorChanged   = false;
 bool rChanged       = false;
 bool gChanged       = false;
 bool bChanged       = false;
 bool writeEnable    = false;
-Color led_color     = {.red = 0, .green = 0, .blue = 0};
-
+bool bufferBusy = false;
+bool bufferLock = false;
+bool transfer_over = false;
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
 volatile bool transferStarted = false;
-char filename[12];
-
-bool bufferBusy = false;
-
-bool bufferLock = false;
-
-int bytes_w;
-int bytes_s;
-bytes_s = 0;
-bytes_w = 0;
-
-
-sd_write_buffer sd_data_buffer = {.length = 0, .data = {0x00}};
-
-int num_received;
-int num_written;
-
-num_received = 0;
-num_written  = 0;
-
-bool transfer_over = false;
-
-char fileToPlay[12];
 volatile bool playNameChange = false;
+volatile bool isConnected = false;
+volatile bool hasSDCard = true;
+volatile bool stateChanged = false;
+volatile bool velo = false;
+Color userColor = GREEN;
+volatile Mode currentMode;
+char filename[12];
+char fileToPlay[12];
+int bytes_w = 0, bytes_s = 0, num_received = 0, num_written = 0;
+int numKeysToPress = 0;
+static int noteFlag = 0;
+static uint8_t lastEvent = 0;
+static uint8_t keyNum = 0x00;
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -130,24 +114,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
-sd_write_evt sd_evt;
-
-
-// States & vars defined here
-typedef enum states{VIS, LTP, PA}Mode;
-volatile Mode currentMode;
-volatile bool isConnected = false;
-volatile bool hasSDCard = true;
-volatile bool stateChanged = false;
-volatile bool velo = false;
-Color userColor = GREEN;
-static int noteFlag = 0;
-static uint8_t lastEvent = 0;
-static uint8_t keyNum = 0x00;
-
-
-int numKeysToPress = 0;
-
+//Begin Functions
 void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
 }
@@ -755,11 +722,8 @@ static void conn_params_init(void)
  */
 static void sleep_mode_enter(void)
 {
-    uint32_t err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
-
-    // Prepare wakeup buttons.
-    err_code = bsp_btn_ble_sleep_mode_prepare();
+    uint32_t err_code = NRF_SUCCESS;
+    ledIndicate(LED_IDLE);
     APP_ERROR_CHECK(err_code);
 
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
@@ -781,7 +745,8 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
     switch (ble_adv_evt)
     {
         case BLE_ADV_EVT_FAST:
-            err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+            err_code = NRF_SUCCESS;
+            ledIndicate(LED_ADVERTISING);
             APP_ERROR_CHECK(err_code);
             break;
         case BLE_ADV_EVT_IDLE:
@@ -804,15 +769,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
+            err_code = NRF_SUCCESS;
+            ledIndicate(LED_CONNECTED);
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
-            nrf_gpio_pin_set(6);
-            led_connect_animation();
             isConnected = true;
-            //err_code = ble_nus_data_send(&m_nus, "System Initialized", 19, m_conn_handle);
+            err_code = ble_nus_data_send(&m_nus, "System Initialized", 19, m_conn_handle);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -912,43 +876,6 @@ void gatt_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/**@brief Function for handling events from the BSP module.
- *
- * @param[in]   event   Event generated by button press.
- */
-void bsp_event_handler(bsp_event_t event)
-{
-    uint32_t err_code;
-    switch (event)
-    {
-        case BSP_EVENT_SLEEP:
-            sleep_mode_enter();
-            break;
-
-        case BSP_EVENT_DISCONNECT:
-            err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-            if (err_code != NRF_ERROR_INVALID_STATE)
-            {
-                APP_ERROR_CHECK(err_code);
-            }
-            break;
-
-        case BSP_EVENT_WHITELIST_OFF:
-            if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
-            {
-                err_code = ble_advertising_restart_without_whitelist(&m_advertising);
-                if (err_code != NRF_ERROR_INVALID_STATE)
-                {
-                    APP_ERROR_CHECK(err_code);
-                }
-            }
-            break;
-
-        default:
-            break;
-    }
-}
 
 /**@brief   Function for handling app_uart events.
  *
@@ -1055,8 +982,8 @@ static void uart_init(void)
     {
         .rx_pin_no    = RX_PIN_NUMBER,
         .tx_pin_no    = 11,
-        .rts_pin_no   = RTS_PIN_NUMBER,
-        .cts_pin_no   = CTS_PIN_NUMBER,
+        .rts_pin_no   = 8,
+        .cts_pin_no   = 9,
         .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
         .use_parity   = false,
         .baud_rate    = UART_BAUDRATE_BAUDRATE_Baud31250
@@ -1115,24 +1042,6 @@ static void advertising_init(void)
     APP_ERROR_CHECK(err_code);
 
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
-}
-
-
-/**@brief Function for initializing buttons and leds.
- *
- * @param[out] p_erase_bonds  Will be true if the clear bonding button was pressed to wake the application up.
- */
-static void buttons_leds_init(bool * p_erase_bonds)
-{
-    bsp_event_t startup_event;
-
-    uint32_t err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = bsp_btn_ble_init(NULL, &startup_event);
-    APP_ERROR_CHECK(err_code);
-
-    *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
 }
 
 
@@ -1248,14 +1157,12 @@ void midi_operations() {
  */
 int main(void)
 {
-    bool erase_bonds;
     currentMode = VIS;
 
     // Initialize BLE.
     uart_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
-    //buttons_leds_init(&erase_bonds);
     power_management_init();
     ble_stack_init();
     gap_params_init();
@@ -1275,6 +1182,7 @@ int main(void)
 
     // LEDs
     initialize_led_strip(288, 25);
+    initIndication();
     //fill_color(RED);
 
     //midi_delay(init_midi_file("TEST.MID"));

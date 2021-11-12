@@ -13,6 +13,14 @@
 #define WHITE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define GOLD (Color) {.red = 184 * BRIGHTNESS, .green = 134 * BRIGHTNESS, .blue = 11 * BRIGHTNESS}
 
+//Board Indications
+#define LED_BLUE 6
+#define LED_GREEN 7
+#define LED_POWER 0
+#define LED_IDLE 1
+#define LED_ADVERTISING 2
+#define LED_CONNECTED 3
+
 typedef struct _Color {
     uint8_t red;
     uint8_t green;
@@ -42,10 +50,14 @@ Color get_key_color(int key_num);
 void set_key(int key_num, int stat, int velocity, Color color);
 void set_key_velocity(int key_num, int stat, int velocity);
 void set_key_learn(int key_num, int stat, int velocity);
-void led_connect_animation();
 Color get_led_color(int led_num);
 bool areSameColor(Color a, Color b);
 bool isNoteFinished(int keysToPress);
 void reset_ltp();
+void led_connect_animation();
+
+//Board Indication
+void initIndication();
+void ledIndicate(int);
 
 #endif // __LEDS_H__
