@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include "leds.h"
 #include "nrf.h"
-#include "nrf_delay.h" // leds, uart
+#include "nrf_delay.h"
+#include "nrf_gpio.h"
 
 int num_leds;
 int led_pin;
@@ -248,4 +249,29 @@ void initialize_led_strip(int num, int pin){
     keysPressed = 0; // TODO: Set to zero on LTP MODE Entry. Make sure it's never negative.
     incorrectKeys = 0;
     //fill_test();
+}
+
+void initIndication() {
+  nrf_gpio_cfg_output(LED_BLUE);
+  nrf_gpio_cfg_output(LED_GREEN);
+  nrf_gpio_cfg_output(-1);
+  ledIndicate(LED_POWER);
+}
+void ledIndicate(int action) {
+  switch(action) {
+    case LED_POWER:
+      nrf_gpio_pin_set(LED_GREEN);
+      break;
+    case LED_IDLE:
+      nrf_gpio_pin_clear(LED_BLUE);
+      break;
+    case LED_ADVERTISING:
+      break;
+    case LED_CONNECTED:
+      nrf_gpio_pin_set(LED_BLUE);
+      break;
+    default:
+      nrf_gpio_pin_clear(LED_GREEN);
+      nrf_gpio_pin_clear(LED_BLUE);
+  }
 }

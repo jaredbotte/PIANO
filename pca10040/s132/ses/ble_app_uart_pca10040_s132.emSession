@@ -68,17 +68,20 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="6" y="1240" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="1189" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1150" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="1135" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="4" y="31" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="midifile.c" selected="0" top="9" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="29" y="43" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.h" selected="0" top="23" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="38" y="194" useTextEdit="1" openedFrom="//nas01.itap.purdue.edu/puhome/My Documents/nRF5_SDK_17.0.2_d674dde/nRF5_SDK_17.0.2_d674dde/examples/my_projects/PIANO/main.c" useBinaryEdit="0" left="0" path="leds.c" selected="0" top="201" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="10" y="20" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="midifile.h" selected="0" top="6" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="30" y="11834" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="11811" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="44" y="35" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.h" selected="1" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="24" y="256" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="leds.c" selected="1" top="247" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="22" y="58" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="leds.h" selected="0" top="30" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="23" y="45" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../external/fatfs/src/ffconf.h" selected="0" top="31" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="71" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf52.s" selected="0" top="59" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="29" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.c" selected="0" top="1" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="900" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/log/src/nrf_log_frontend.c" selected="0" top="888" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="4" y="470" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/bsp/bsp.c" selected="0" top="454" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="11" y="43" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="../../../../../../components/ble/nrf_ble_qwr/nrf_ble_qwr.c" selected="0" top="24" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" openedFrom="C:/Program Files/SEGGER/nRF5/components/ble/nrf_ble_qwr/nrf_ble_qwr.c" useBinaryEdit="0" left="0" path="../../../../../../components/softdevice/s132/headers/ble.h" selected="0" top="36" codecName="Default"/>
  </Files>
  <ARMCrossStudioWindow activeProject="ble_app_uart_pca10040_s132" fileDialogDefaultFilter="*" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="//nas01.itap.purdue.edu/puhome/desktop/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/components/toolchain/cmsis/dsp/Include" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>
