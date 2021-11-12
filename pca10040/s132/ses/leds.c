@@ -126,12 +126,12 @@ Color get_key_color(int key_num){
     return get_led_color(key_array[key_num].starting_led);
 }
 
-void set_key(int key_num, int stat, Color color){
+void set_key(int key_num, int stat, int velocity, Color color){
     if(key_num >= 88){
         return;
     }
     Key current_key = key_array[key_num];
-    if(stat == 0){
+    if(stat == 0 || velocity == 0){
         color = (Color) {.red = 0, .green = 0, .blue = 0};
     }
     for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
@@ -174,32 +174,32 @@ bool areSameColor(Color a, Color b){
     return true;
 }  
 
-void set_key_learn(int key_num, int stat){
+void set_key_learn(int key_num, int stat, int velocity){
     Color curr_col = get_key_color(key_num);
     if(stat == 1){ // Key must be off or blue
         keysPressed++;
         if(areSameColor(curr_col, BLUE)){
-            set_key(key_num, 1, GREEN);
+            set_key(key_num, 1, velocity, GREEN);
         } else {
-            set_key(key_num, 1, RED);
+            set_key(key_num, 1, velocity, RED);
             incorrectKeys++;
         }
     } else { // Key must be green or red
         keysPressed--;
         if(areSameColor(curr_col, GREEN)){
-            set_key(key_num, 1, BLUE);
+            set_key(key_num, 1, velocity, BLUE);
         } else if (areSameColor(curr_col, RED)){
-            set_key(key_num, 1, OFF);
+            set_key(key_num, 1, velocity, OFF);
             incorrectKeys--;
         }
         else if (areSameColor(curr_col, OFF)){
-            set_key(key_num, 1, OFF);
+            set_key(key_num, 1, velocity, OFF);
             incorrectKeys--;
         }
         else if (areSameColor(curr_col, BLUE)){
-            set_key(key_num, 1, BLUE);
+            set_key(key_num, 1, velocity, BLUE);
         }else {
-            set_key(key_num, 1, GOLD); // This indicates a problem.
+            set_key(key_num, 1, velocity, GOLD); // This indicates a problem.
         }
     }
     if(incorrectKeys > keysPressed){

@@ -7,6 +7,7 @@ bool endFlag = false;
 typedef enum states{VIS, LTP, PA}Mode;
 float tempoDiv = 1.0;
 extern currentMode;
+uint8_t last_event;
 
 uint8_t get_next_byte(){
     uint8_t byte = 0;
@@ -81,6 +82,60 @@ unsigned long get_variable_data()
 }
 
 uint8_t read_next_track_event(){
+    // NOTE: This function will keep reading bytes until it finds something it knows.
+    // DISCLAIMER: This will not parse running events properly. All events after first set will be discarded.
+    
+    uint8_t evt;
+    bool runon = false;
+    bool got_f = false;
+    uint8_t last_valid_event;
+    unsigned long len;
+
+    do{
+        evt = get_next_byte();
+        got_f = false;
+        runon = false;
+
+        switch(evt){
+            case 0xFF:
+                get_meta_event();
+                got_f = true;
+                break;
+            case 0xF0:
+                len = get_variable_data();
+                f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
+                got_f = true;
+                break;
+             case 0xF7:
+                len = get_variable_data();
+                f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
+                got_f = true;
+                break;
+        }
+
+        if(!got_f){
+            switch(evt & 0xF0){
+                case 0xA0:
+                case 0xB0:
+                case 0xE0:
+                    f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
+                    break;
+                case 0xC0:
+                case 0xD0:
+                    f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 1);
+                    break;
+                case 0x90:
+                case 0x80:
+                    break;
+                default:
+                    runon = true;
+            }
+        }
+    }while(runon);
+    return evt;
+} 
+
+/*uint8_t read_next_track_event(){
 // TODO: USE SWITCH
     uint8_t evt = get_next_byte();
     //printf("Found track event %X\n\r", evt);
@@ -96,22 +151,25 @@ uint8_t read_next_track_event(){
         unsigned long len = get_variable_data();
         printf("Length rcvd:%x\r\n",len);
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
-    }  else if ((evt & 0xF0) == 0xC0 | (evt & 0xF0) == 0xD0) {
+    }  else if ((evt & 0xF0) == 0xC0 || (evt & 0xF0) == 0xD0) {
         //printf("MIDI track event.\r\n");
         //UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 1);
-    } else if ((evt & 0xF0) == 0xA0 | (evt & 0xF0) == 0xB0 | (evt & 0xF0) == 0xE0){ 
+    } else if ((evt & 0xF0) == 0xA0 || (evt & 0xF0) == 0xB0 || (evt & 0xF0) == 0xE0){ 
         //UNUSED_VARIABLE(get_next_byte());
         //UNUSED_VARIABLE(get_next_byte());
         f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
-    }else if ((evt& 0xf0) == 0x90 | (evt & 0xf0) == 0x80){
+    }else if ((evt& 0xf0) == 0x90 || (evt & 0xf0) == 0x80){
         //Don't do anything!
     }else {
+        // RUNNING EVENT - PARSE APPROPRIATELY
         UINT loc = f_tell(&midi_file.ptr);
         printf("%x %X NOT KNOWN!\r\n", loc, evt);
+        evt = read_next_track_event();
     }
+    last_event = evt;
     return evt;
-}
+}*/
 
 unsigned long read_next_midi_data(){
     unsigned long delay = 0;
@@ -121,9 +179,9 @@ unsigned long read_next_midi_data(){
         if (evt == 0x90 || evt == 0x80) {
             MidiEvent mevt = get_midi_event(evt);
             if (evt == 0x90) {
-                set_key(mevt.note, 1, BLUE);
+                set_key(mevt.note, 1, mevt.velocity, BLUE);
             } else {
-                set_key(mevt.note, 0, OFF);
+                set_key(mevt.note, 0, mevt.velocity, OFF);
             }
         }
         delay = get_variable_data();
@@ -158,9 +216,9 @@ void learn_next_midi_data(int* numKeys){
                 if(!areSameColor(get_key_color(mevt.note), GREEN)){
                     (*numKeys)++;
                 }
-                set_key(mevt.note, 1, BLUE);
+                set_key(mevt.note, 1, mevt.velocity, BLUE);
             } else {
-                set_key(mevt.note, 0, RED);
+                set_key(mevt.note, 0, mevt.velocity, RED);
                 addIncorrect();
                 (*numKeys)--;
             }

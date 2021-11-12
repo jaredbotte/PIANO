@@ -139,6 +139,8 @@ volatile Mode currentMode;
 volatile bool isConnected = false;
 volatile bool hasSDCard = true;
 volatile bool stateChanged = false;
+volatile bool velo = false;
+Color userColor = GREEN;
 static int noteFlag = 0;
 static uint8_t lastEvent = 0;
 static uint8_t keyNum = 0x00;
@@ -534,6 +536,14 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             led_connect_animation();
         }
 
+        if(strncmp(&data, "velo_false", 10) == 0){
+            velo = false;
+        }
+
+        if(strncmp(&data, "velo_true", 9) == 0){
+            velo = true;
+        }
+
         if ((colorChanged == true) && (rChanged == false) && (gChanged == false) && (bChanged == false)) {
             if (strncmp(&data, "red",3) == 0) {
                 rChanged = true;
@@ -550,10 +560,9 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
         if ((colorChanged == true) && (rChanged == true) && (gChanged == false) && (bChanged == false) && (strncmp(&data, "red",3) != 0)) {
             int color_value = atoi(&data);
-            led_color.red = color_value;
-            //printf("Red Color Val: %d\r\n",color_value);
+            userColor.red = color_value;
+            printf("Red Color Val: %d\r\n",color_value);
 
-            fill_color(led_color);
             colorChanged = false;
             rChanged = false;
 
@@ -561,10 +570,9 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         }
         else if ((colorChanged == true) && (rChanged == false) && (gChanged == true) && (bChanged == false) && (strncmp(&data, "green",5) != 0)) {
             int color_value = atoi(&data);
-            led_color.green = color_value;
+            userColor.green = color_value;
             //printf("Green Color Val: %d\r\n",color_value);
 
-            fill_color(led_color);
             colorChanged = false;
             gChanged = false;
 
@@ -572,10 +580,9 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         }
         else if ((colorChanged == true) && (rChanged == false) && (gChanged == false) && (bChanged == true) && (strncmp(&data, "blue",4) != 0)) {
             int color_value = atoi(&data);
-            led_color.blue = color_value;
+            userColor.blue = color_value;
             //printf("Blue Color Val: %d\r\n",color_value);
 
-            fill_color(led_color);
             colorChanged = false;
             bChanged = false;
 
@@ -975,13 +982,17 @@ void uart_event_handle(app_uart_evt_t * p_event)
             {
               int type = lastEvent == 0x90 ? 1 : 0; 
               if (currentMode == VIS) {
-                set_key_velocity(keyNum, type, eventUART);
+                if (velo){
+                    set_key_velocity(keyNum, type, eventUART);
+                }else{
+                    set_key(keyNum, type, eventUART, userColor);
+                }
               } 
               else if (currentMode == PA) {
-                set_key_play(keyNum, type);
+                set_key_play(keyNum, type, eventUART);
               } 
               else if (currentMode == LTP) {
-                set_key_learn(keyNum, type);
+                set_key_learn(keyNum, type, eventUART);
                 if(isNoteFinished(numKeysToPress)){
                     learn_next_midi_data(&numKeysToPress);
                     //printf("keys to press: %d\r\n", numKeysToPress);
