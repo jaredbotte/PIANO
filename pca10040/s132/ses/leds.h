@@ -5,13 +5,16 @@
 #define BRIGHTNESS 24.0 / 255.0
 #define OFF (Color) {.red = 0, .green = 0, .blue = 0}
 #define GREEN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 0}
-#define BLUE (Color) {.red = 0, 0, .blue = 255 * BRIGHTNESS}
+#define BLUE (Color) {.red = 0, .green = 0, .blue = 255 * BRIGHTNESS}
 #define ORANGE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 0}
 #define RED (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 0}
 #define MAGENTA (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 255 * BRIGHTNESS}
 #define CYAN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define WHITE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define GOLD (Color) {.red = 184 * BRIGHTNESS, .green = 134 * BRIGHTNESS, .blue = 11 * BRIGHTNESS}
+#define LEARN_COLOR BLUE
+#define INCORRECT_COLOR RED
+#define CORRECT_COLOR GREEN
 
 //Board Indications
 #define LED_BLUE 6
@@ -30,6 +33,9 @@ typedef struct _Color {
 typedef struct _Key {
     int starting_led;
     int num_led;
+    bool systemLit;
+    bool userLit;
+    Color color;
 } Key;
 
 // Static setup/critical functions
@@ -47,13 +53,13 @@ void fill_color(Color color);
 void fill_test();
 void set_led(int led_num, Color color);
 Color get_key_color(uint8_t key_num);
-void set_key(uint8_t key_num, int stat, int velocity, Color color);
-void set_key_velocity(int key_num, int stat, int velocity);
+void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color color);
+void set_key_velocity(uint8_t key_num, bool keyOn, int velocity);
 void checkLearn(uint8_t key_num, int velocity);
 void set_key_learn(uint8_t key_num, bool keyOn, int velocity);
 Color get_led_color(int led_num);
 bool areSameColor(Color a, Color b);
-bool isNoteFinished(int keysToPress);
+bool isLearnSetFinished();
 void reset_ltp();
 void led_connect_animation();
 

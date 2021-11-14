@@ -93,9 +93,20 @@ static void setup_key_array(int num_keys){
     int key_led = 0;
     int width = 2; // For now we'll make each key two LEDs wide. Actually pretty darn close!
     for(int k = 0; k < num_keys; k++){
-        key_array[k] = (Key) {.starting_led = key_led, .num_led = width};
+        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false, .color = OFF};
         key_led += width;
     }
+}
+
+
+void updateKeys() {
+    for(int i = 0; i < num_keys; i++) {
+        Key current_key = key_array[i];
+        for(int j = current_key.starting_led; j < current_key.starting_led + current_key.num_led; j++){
+            set_led(j, current_key.color);
+        }
+    }
+    update_led_strip();
 }
 
 
@@ -111,11 +122,13 @@ void fill_color(Color color){
 }
 
 
-bool isNoteFinished(int keysToPress){
-    if(keysPressed == keysToPress && incorrectKeys == 0){
-        return true;
+bool isLearnSetFinished(){
+    for(int i = 0; i < num_keys; i++) {
+        Key current_key = key_array[i];
+        if(current_key.systemLit && !current_key.userLit)
+            return false;
     }
-    return false;
+    return true;
 }
 
 
@@ -156,36 +169,43 @@ Color get_key_color(uint8_t key_num){
 }
 
 
-void set_key(uint8_t key_num, int stat, int velocity, Color color){
+void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color color){
     if(key_num >= 88){
         return;
     }
-    Key current_key = key_array[key_num];
-    if(stat == 0 || velocity == 0){
-        color = (Color) {.red = 0, .green = 0, .blue = 0};
+    Key* current_key = &key_array[key_num];
+    if(!keyOn || velocity == 0){
+        current_key->color = OFF;
+        if(isSystemLit)
+            current_key->systemLit = false;
+        else  
+            current_key->userLit = false;
     }
-    for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
-        set_led(i, color);
+    else {
+        current_key->color = color;
+        if(isSystemLit)
+            current_key->systemLit = true;
+        else  
+            current_key->userLit = true;
     }
 }
 
 
-void set_key_velocity(int key_num, int stat, int velocity){
-    Key current_key = key_array[key_num];
+void set_key_velocity(uint8_t key_num, bool keyOn, int velocity){
     Color color = (Color) {.red = 0, .green = 63, .blue = 0};
-    if(stat == 0) {
+    if(!keyOn) {
         color = OFF;
-    } else if (velocity > 127.0 * 0.6) {
+    } 
+    else if (velocity > 127.0 * 0.6) {
         color = RED;
-    } else if (velocity > 127.0 * 0.3) {
+    } 
+    else if (velocity > 127.0 * 0.3) {
         color = ORANGE;
-    } else {
+    } 
+    else {
         color = GREEN;
     }
-
-    for(int i = current_key.starting_led; i < current_key.starting_led + current_key.num_led; i++){
-        set_led(i, color);
-    }
+    set_key(key_num, keyOn, true, velocity, color);
 }
 
 
@@ -194,76 +214,25 @@ bool areSameColor(Color a, Color b){
 }  
 
 
-void checkLearn(uint8_t key_num, int velocity) {
-    Color curr_col = get_key_color(key_num);
-    if(userKeys[key_num] == 1) {
-        if(areSameColor(curr_col, BLUE)) set_key(key_num, 1, velocity, GREEN); //TODO I'd like this to stay green for only a short time
-    }
-    else { // Key must be green or red
-        keysPressed--;
-        if(areSameColor(curr_col, GREEN)) { //NOTE what happens if you hold this down and the note changes? 
-            set_key(key_num, 1, velocity, BLUE);
-        } 
-        else if (areSameColor(curr_col, RED)) {
-            set_key(key_num, 1, velocity, OFF);
-            incorrectKeys--;
-        }
-        else if (areSameColor(curr_col, OFF)){
-            set_key(key_num, 1, velocity, OFF);
-            incorrectKeys--;
-        }
-        else if (areSameColor(curr_col, BLUE)){
-            set_key(key_num, 1, velocity, BLUE);
-        }
-        else {
-            set_key(key_num, 1, velocity, GOLD); // This indicates a problem.
-        }
-    }
-    if(incorrectKeys > keysPressed){
-        incorrectKeys = keysPressed;
-        // TODO: This is a terrible assumption! But... there's currently not a better option
-        //NOTE: I think this is occuring when a note is both turned on and off during the same midi event timeline.
-    }
-}
-
-
 void set_key_learn(uint8_t key_num, bool keyOn, int velocity){
-    userKeys[key_num] = keyOn ? 1 : 0;   
-    checkLearn(key_num, velocity);
-
-    /*
-    if(stat == 1){ // Key must be off or blue
-        keysPressed++;
-        if(areSameColor(curr_col, BLUE)) set_key(key_num, 1, velocity, GREEN);
+    Key* current_key = &key_array[key_num];
+    if(keyOn) {
+        if(current_key->systemLit) {
+            set_key(key_num, true, false, velocity, CORRECT_COLOR);
+        }
         else {
-            set_key(key_num, 1, velocity, RED);
-            incorrectKeys++;
+            set_key(key_num, true, false, velocity, INCORRECT_COLOR);
         }
-    } else { // Key must be green or red
-        keysPressed--;
-        if(areSameColor(curr_col, GREEN)){
-            set_key(key_num, 1, velocity, BLUE);
-        } else if (areSameColor(curr_col, RED)){
-            set_key(key_num, 1, velocity, OFF);
-            incorrectKeys--;
+    } 
+    else {
+        if(current_key->systemLit) {
+            current_key->userLit = false;
+            set_key(key_num, true, true, velocity, LEARN_COLOR);
         }
-        else if (areSameColor(curr_col, OFF)){
-            set_key(key_num, 1, velocity, OFF);
-            incorrectKeys--;
-        }
-        else if (areSameColor(curr_col, BLUE)){
-            set_key(key_num, 1, velocity, BLUE);
-        }else {
-            set_key(key_num, 1, velocity, GOLD); // This indicates a problem.
+        else {
+            set_key(key_num, false, false, velocity, OFF);
         }
     }
-    if(incorrectKeys > keysPressed){
-        incorrectKeys = keysPressed;
-        // TODO: This is a terrible assumption! But... there's currently not a better option
-        //NOTE: I think this is occuring when a note is both turned on and off during the same midi event timeline.
-    }
-    //printf("Num keys pressed: %d\r\nIncorrect: %d\r\n", keysPressed, incorrectKeys);
-    */
 }
 
 

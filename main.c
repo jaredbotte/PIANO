@@ -116,7 +116,8 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 
 //Begin Functions
 void led_update (void* p_event_data, uint16_t event_size) {
-  update_led_strip();
+  updateKeys();
+  //update_led_strip();
 }
 
 void TIMER3_IRQHandler(void)
@@ -909,14 +910,14 @@ void uart_event_handle(app_uart_evt_t * p_event)
               bool type = lastEvent == 0x90 ? true : false; 
               if (currentMode == VIS) {
                 if (velo) set_key_velocity(keyNum, type, eventUART);
-                else set_key(keyNum, type, eventUART, userColor);
+                else set_key(keyNum, type, false, eventUART, userColor);
               } 
               else if (currentMode == PA) {
                 set_key_play(keyNum, type, eventUART);
               } 
               else if (currentMode == LTP) {
                 set_key_learn(keyNum, type, eventUART);
-                if(isNoteFinished(numKeysToPress)){
+                if(isLearnSetFinished()) {
                     learn_next_midi_data(&numKeysToPress);
                     //printf("keys to press: %d\r\n", numKeysToPress);
                 }
@@ -1038,17 +1039,6 @@ static void advertising_init(void)
     APP_ERROR_CHECK(err_code);
 
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
-}
-
-
-/**@brief Function for initializing the nrf log module.
- */
-static void log_init(void)
-{
-    ret_code_t err_code = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(err_code);
-
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
 

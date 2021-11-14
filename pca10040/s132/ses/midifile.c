@@ -7,6 +7,7 @@ bool endFlag = false;
 typedef enum states{VIS, LTP, PA}Mode;
 float tempoDiv = 1.0;
 extern currentMode;
+extern Key* key_array;
 uint8_t last_event;
 
 uint8_t get_next_byte(){
@@ -135,42 +136,6 @@ uint8_t read_next_track_event(){
     return evt;
 } 
 
-/*uint8_t read_next_track_event(){
-// TODO: USE SWITCH
-    uint8_t evt = get_next_byte();
-    //printf("Found track event %X\n\r", evt);
-    if (evt == 0xFF){
-        get_meta_event();
-    } else if (evt == 0xF0){
-        //printf("Found some text.\r\n");
-        unsigned long len = get_variable_data();
-        printf("Length rcvd:%x\r\n",len);
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
-    } else if (evt == 0xF7){
-        //printf("Found some stuff. Skipping it.\r\n");
-        unsigned long len = get_variable_data();
-        printf("Length rcvd:%x\r\n",len);
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
-    }  else if ((evt & 0xF0) == 0xC0 || (evt & 0xF0) == 0xD0) {
-        //printf("MIDI track event.\r\n");
-        //UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 1);
-    } else if ((evt & 0xF0) == 0xA0 || (evt & 0xF0) == 0xB0 || (evt & 0xF0) == 0xE0){ 
-        //UNUSED_VARIABLE(get_next_byte());
-        //UNUSED_VARIABLE(get_next_byte());
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
-    }else if ((evt& 0xf0) == 0x90 || (evt & 0xf0) == 0x80){
-        //Don't do anything!
-    }else {
-        // RUNNING EVENT - PARSE APPROPRIATELY
-        UINT loc = f_tell(&midi_file.ptr);
-        printf("%x %X NOT KNOWN!\r\n", loc, evt);
-        evt = read_next_track_event();
-    }
-    last_event = evt;
-    return evt;
-}*/
-
 unsigned long read_next_midi_data(){
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
@@ -180,9 +145,9 @@ unsigned long read_next_midi_data(){
         if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
             if (evt == 0x90) {
-                set_key(mevt.note, 1, mevt.velocity, BLUE);
+                set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
             } else {
-                set_key(mevt.note, 0, mevt.velocity, OFF);
+                set_key(mevt.note, false, true, mevt.velocity, OFF);
             }
         }
         delay = get_variable_data();
@@ -215,14 +180,13 @@ void learn_next_midi_data(int* numKeys){
         if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90){
-                if(!areSameColor(get_key_color(mevt.note), GREEN)){
-                    (*numKeys)++;
+                if(key_array[mevt.note].userLit){
+                    //TODO wait ~ half a second before setting it to the system color
                 }
-                set_key(mevt.note, 1, mevt.velocity, BLUE);
-            } else {
-                set_key(mevt.note, 0, mevt.velocity, RED);
-                addIncorrect();
-                (*numKeys)--;
+                set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+            } 
+            else {
+                set_key(mevt.note, false, true, mevt.velocity, OFF);
             }
         }
         delay = get_variable_data();
