@@ -125,8 +125,10 @@ void fill_color(Color color){
 bool isLearnSetFinished(){
     for(int i = 0; i < num_keys; i++) {
         Key current_key = key_array[i];
-        if(current_key.systemLit && !current_key.userLit)
+        bool wtfsegger = (current_key.systemLit && !current_key.userLit);
+        if((current_key.systemLit && !current_key.userLit) || (!current_key.systemLit && current_key.userLit)) {
             return false;
+        }
     }
     return true;
 }

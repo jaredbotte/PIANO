@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "midifile.h"
+#include "nrf_delay.h"
 
 bool endFlag = false;
 typedef enum states{VIS, LTP, PA}Mode;
@@ -171,6 +172,13 @@ unsigned long read_next_midi_data(){
     return delay_ms_int;
 }
 
+
+static void correct_delay_handler(void* p_context){
+    MidiEvent* mevt = (MidiEvent*) p_context;
+    set_key(mevt->note, true, true, mevt->velocity, LEARN_COLOR);
+}
+
+
 void learn_next_midi_data(int* numKeys){
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
@@ -181,7 +189,17 @@ void learn_next_midi_data(int* numKeys){
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90){
                 if(key_array[mevt.note].userLit){
-                    //TODO wait ~ half a second before setting it to the system color
+                    //nrf_delay_ms(1); //probably not a good way to do this
+                    //set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+                    /*TODO make this stay green for ~ half a second before turning back to the learn color
+                    APP_TIMER_DEF(correct_delay);
+                    ret_code_t err_code;
+                    err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
+                    APP_ERROR_CHECK(err_code);
+
+                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(4), &mevt);
+                    APP_ERROR_CHECK(err_code);
+                    */
                 }
                 set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
             } 

@@ -95,6 +95,7 @@ volatile bool velo = false;
 Color userColor = GREEN;
 volatile Mode currentMode;
 char filename[12];
+//char fileToPlay[12] = {0x50,0x48,0x49,0x4c,0x30,0x2e,0x4d,0x49,0x44,0x0d,0x00,0x00}; //this is phil0
 char fileToPlay[12];
 int bytes_w = 0, bytes_s = 0, num_received = 0, num_written = 0;
 int numKeysToPress = 0;
@@ -1143,7 +1144,9 @@ void midi_operations() {
  */
 int main(void) 
 {
-    currentMode = VIS;
+    //currentMode = VIS;
+    //currentMode = LTP;
+    //stateChanged = true;
 
     // Initialize BLE.
     uart_init();
@@ -1164,11 +1167,11 @@ int main(void)
 
     // Start execution.
     printf("\r\nUART started.\r\n");
+    initIndication();
     advertising_start();
 
     // LEDs
     initialize_led_strip(288, 25, 88);
-    initIndication();
     //fill_color(RED);
 
     //midi_delay(init_midi_file("TEST.MID"));
