@@ -41,15 +41,16 @@ static void fill_buffer_color(uint16_t* buffer, uint32_t curr_col);
 static void fill_buffer_reset(uint16_t* buffer);
 
 // Interfacing functions
-void initialize_led_strip(int num, int pin);
+void initialize_led_strip(int ledNum, int pinNum, int keyNum);
 void update_led_strip();
 void fill_color(Color color);
 void fill_test();
 void set_led(int led_num, Color color);
-Color get_key_color(int key_num);
-void set_key(int key_num, int stat, int velocity, Color color);
+Color get_key_color(uint8_t key_num);
+void set_key(uint8_t key_num, int stat, int velocity, Color color);
 void set_key_velocity(int key_num, int stat, int velocity);
-void set_key_learn(int key_num, int stat, int velocity);
+void checkLearn(uint8_t key_num, int velocity);
+void set_key_learn(uint8_t key_num, bool keyOn, int velocity);
 Color get_led_color(int led_num);
 bool areSameColor(Color a, Color b);
 bool isNoteFinished(int keysToPress);

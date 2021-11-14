@@ -122,7 +122,6 @@ void led_update (void* p_event_data, uint16_t event_size) {
 void TIMER3_IRQHandler(void)
 {
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
-  //update_led_strip();
   app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
 }
 
@@ -907,13 +906,10 @@ void uart_event_handle(app_uart_evt_t * p_event)
             }
             else if(noteFlag == 2) //Velocity info
             {
-              int type = lastEvent == 0x90 ? 1 : 0; 
+              bool type = lastEvent == 0x90 ? true : false; 
               if (currentMode == VIS) {
-                if (velo){
-                    set_key_velocity(keyNum, type, eventUART);
-                }else{
-                    set_key(keyNum, type, eventUART, userColor);
-                }
+                if (velo) set_key_velocity(keyNum, type, eventUART);
+                else set_key(keyNum, type, eventUART, userColor);
               } 
               else if (currentMode == PA) {
                 set_key_play(keyNum, type, eventUART);
@@ -1155,7 +1151,7 @@ void midi_operations() {
 
 /**@brief Application main function.
  */
-int main(void)
+int main(void) 
 {
     currentMode = VIS;
 
@@ -1181,7 +1177,7 @@ int main(void)
     advertising_start();
 
     // LEDs
-    initialize_led_strip(288, 25);
+    initialize_led_strip(288, 25, 88);
     initIndication();
     //fill_color(RED);
 

@@ -175,8 +175,9 @@ unsigned long read_next_midi_data(){
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
+        uint8_t chan = evt & 0xF;
         evt &= 0xF0;
-        if (evt == 0x90 || evt == 0x80) {
+        if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
             if (evt == 0x90) {
                 set_key(mevt.note, 1, mevt.velocity, BLUE);
@@ -209,8 +210,9 @@ void learn_next_midi_data(int* numKeys){
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
+        uint8_t chan = evt & 0xF;
         evt &= 0xF0;
-        if (evt == 0x90 || evt == 0x80) {
+        if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90){
                 if(!areSameColor(get_key_color(mevt.note), GREEN)){
