@@ -281,7 +281,7 @@ void initialize_led_strip(int ledNum, int pinNum, int keyNum){
 void initIndication() {
   nrf_gpio_cfg_output(LED_BLUE);
   nrf_gpio_cfg_output(LED_GREEN);
-  nrf_gpio_cfg_output(-1);
+  ledIndicate(-1);
   ledIndicate(LED_POWER);
 }
 
