@@ -249,9 +249,12 @@ void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color 
     Key* current_key = &key_array[key_num];
     if(!keyOn || velocity == 0){
         color = OFF;
-        if(isSystemLit)
+        if(isSystemLit) //NOTE is it nessescary to differentiate between the user and system if we turn the key off?
+        {
             current_key->systemLit = false;
-        else  
+            printf("Turning system LED off\r\n");
+        }
+        else
             current_key->userLit = false;
     }
     else {
@@ -326,14 +329,20 @@ Color get_key_color(uint8_t key_num){
 
 
 //Returns if the current LTP note set is complete
-bool isLearnSetFinished(){
+bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of just setting them
+    bool finished = true;
     for(int i = 0; i < num_keys; i++) {
         Key current_key = key_array[i];
-        if((current_key.systemLit && !current_key.userLit) || (!current_key.systemLit && current_key.userLit)) {
-            return false;
+        if((current_key.systemLit && !current_key.userLit)) { //User hasn't pressed a key
+            finished = false;
+            set_key(i, true, true, 100, LEARN_COLOR);
+        }
+        if((!current_key.systemLit && current_key.userLit)) { //User is pressing an incorrect key
+            finished = false;
+            set_key(i, true, false, 100, INCORRECT_COLOR);
         }
     }
-    return true;
+    return finished;
 }
 
 

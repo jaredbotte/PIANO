@@ -1115,6 +1115,7 @@ void midi_operations() {
     if (stateChanged){
         //hasSDCard = !nrf_gpio_pin_read(30);
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
+        //TODO clear all user lit keys before we go into LTP, and when we exit we clear all system lit keys!!!
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
