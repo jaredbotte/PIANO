@@ -2,6 +2,7 @@
 #define __LEDS_H__
 #include <stdint.h>
 
+//LED Strip Colors
 #define BRIGHTNESS 24.0 / 255.0
 #define OFF (Color) {.red = 0, .green = 0, .blue = 0}
 #define GREEN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 0}
@@ -15,6 +16,7 @@
 #define LEARN_COLOR BLUE
 #define INCORRECT_COLOR RED
 #define CORRECT_COLOR GREEN
+#define ERROR_COLOR GOLD
 
 //Board Indications
 #define LED_BLUE 6
@@ -35,36 +37,33 @@ typedef struct _Key {
     int num_led;
     bool systemLit;
     bool userLit;
-    Color color;
 } Key;
 
-// Static setup/critical functions
-static void setup_led_pwm_dma();
-static void setup_led_refresh(int rate_hz);
-static void setup_key_array(int num_keys);
-static void fill_buffer(uint16_t* buffer);
-static void fill_buffer_color(uint16_t* buffer, uint32_t curr_col);
-static void fill_buffer_reset(uint16_t* buffer);
-
-// Interfacing functions
+//Init functiuons
+void setup_led_pwm_dma();
+void start_timer();
+void initIndication();
+void setup_key_array(int num_keys);
 void initialize_led_strip(int ledNum, int pinNum, int keyNum);
+
+//Low Level LED Control
 void update_led_strip();
+void ledIndicate(int);
+void set_led(int led_num, Color color);
+bool areSameColor(Color a, Color b);
+Color get_led_color(int led_num);
 void fill_color(Color color);
 void fill_test();
-void set_led(int led_num, Color color);
-Color get_key_color(uint8_t key_num);
+
+
+
+//High Level LED/Key Control
 void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color color);
 void set_key_velocity(uint8_t key_num, bool keyOn, int velocity);
-void checkLearn(uint8_t key_num, int velocity);
+void set_key_play(uint8_t key_num, bool keyOn, int velocity);
 void set_key_learn(uint8_t key_num, bool keyOn, int velocity);
-Color get_led_color(int led_num);
-bool areSameColor(Color a, Color b);
+Color get_key_color(uint8_t key_num);
 bool isLearnSetFinished();
-void reset_ltp();
 void led_connect_animation();
-
-//Board Indication
-void initIndication();
-void ledIndicate(int);
 
 #endif // __LEDS_H__

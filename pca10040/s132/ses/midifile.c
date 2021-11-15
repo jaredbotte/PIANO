@@ -179,7 +179,7 @@ static void correct_delay_handler(void* p_context){
 }
 
 
-void learn_next_midi_data(int* numKeys){
+void learn_next_midi_data(){
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
@@ -188,10 +188,9 @@ void learn_next_midi_data(int* numKeys){
         if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90){
+                /*TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
                 if(key_array[mevt.note].userLit){
-                    //nrf_delay_ms(1); //probably not a good way to do this
                     //set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
-                    /*TODO make this stay green for ~ half a second before turning back to the learn color
                     APP_TIMER_DEF(correct_delay);
                     ret_code_t err_code;
                     err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
@@ -199,8 +198,8 @@ void learn_next_midi_data(int* numKeys){
 
                     err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(4), &mevt);
                     APP_ERROR_CHECK(err_code);
-                    */
                 }
+                */
                 set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
             } 
             else {

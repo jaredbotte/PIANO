@@ -98,7 +98,6 @@ char filename[12];
 //char fileToPlay[12] = {0x50,0x48,0x49,0x4c,0x30,0x2e,0x4d,0x49,0x44,0x0d,0x00,0x00}; //this is phil0
 char fileToPlay[12];
 int bytes_w = 0, bytes_s = 0, num_received = 0, num_written = 0;
-int numKeysToPress = 0;
 static int noteFlag = 0;
 static uint8_t lastEvent = 0;
 static uint8_t keyNum = 0x00;
@@ -117,8 +116,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 
 //Begin Functions
 void led_update (void* p_event_data, uint16_t event_size) {
-  updateKeys();
-  //update_led_strip();
+  update_led_strip();
 }
 
 void TIMER3_IRQHandler(void)
@@ -919,7 +917,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
               else if (currentMode == LTP) {
                 set_key_learn(keyNum, type, eventUART);
                 if(isLearnSetFinished()) {
-                    learn_next_midi_data(&numKeysToPress);
+                    learn_next_midi_data();
                     //printf("keys to press: %d\r\n", numKeysToPress);
                 }
               }
@@ -1119,10 +1117,8 @@ void midi_operations() {
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
-            numKeysToPress = 0;
-            reset_ltp();
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
-            learn_next_midi_data(&numKeysToPress);
+            learn_next_midi_data();
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");

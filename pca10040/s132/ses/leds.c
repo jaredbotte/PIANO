@@ -6,64 +6,34 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 
+
+//Globals
 int num_leds, led_pin, num_keys;
-int keysPressed, incorrectKeys;
 uint16_t* buffer;
 Key* key_array;
-static bool advertisingBLE = false;
-static int userKeys[88] = {0};
 
 
+//--- Interrupt Handlers ---//
+
+//PWM handler when new data is recieved via DMA
 void PWM0_IRQHandler(){
    NRF_PWM0 -> EVENTS_SEQEND[0] = 0;
    while(NRF_PWM0 -> EVENTS_SEQEND[0]);
 }
 
 
-void reset_ltp(){
-    keysPressed = 0;
-    incorrectKeys = 0;
-}
-
-
-void addIncorrect(){
-    incorrectKeys++;
-}
-
-
-void start_timer(void)
-{		
-  NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;
-  NRF_TIMER3->TASKS_CLEAR = 1;
-  NRF_TIMER3->PRESCALER = 3; //TODO play with this to see if we can get note alternation test working properly
-  NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_16Bit;
-  NRF_TIMER3->CC[0] = 10000;
-  NRF_TIMER3->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
-  NVIC_EnableIRQ(TIMER3_IRQn);
-
-  NRF_TIMER4->MODE = TIMER_MODE_MODE_Timer;
-  NRF_TIMER4->TASKS_CLEAR = 1;
-  NRF_TIMER4->PRESCALER = 7; //TODO Ensure this makes a reasonable LED blink speed
-  NRF_TIMER4->BITMODE = TIMER_BITMODE_BITMODE_16Bit;
-  NRF_TIMER4->CC[0] = 10000;
-  NRF_TIMER4->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
-  NVIC_EnableIRQ(TIMER4_IRQn);
-
-  NRF_TIMER3->TASKS_START = 1;
-  NRF_TIMER4->TASKS_START = 1;
-}
-
-
+//BLE Advertising blink handler
 void TIMER4_IRQHandler(void)
 {
   NRF_TIMER4->EVENTS_COMPARE[0] = 0;	
-  if(advertisingBLE) {
-    nrf_gpio_pin_toggle(LED_BLUE);
-  }
+  nrf_gpio_pin_toggle(LED_BLUE);
 }
 
 
-static void setup_led_pwm_dma(){
+//--- Setup Functions ---//
+
+//Initializes DMA for PWM
+void setup_led_pwm_dma() {
     // GPIO setup
     NRF_GPIO -> DIRSET = (1 << led_pin);  // set pin to output
     NRF_GPIO -> OUTCLR = (1 << led_pin);  // set pin to pull low when not in use
@@ -89,57 +59,133 @@ static void setup_led_pwm_dma(){
 }
 
 
-static void setup_key_array(int num_keys){
+//Init timers for updaing LED strip and BLE blinking
+void start_timer() {		
+  NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;
+  NRF_TIMER3->TASKS_CLEAR = 1;
+  NRF_TIMER3->PRESCALER = 3; //TODO play with this to see if we can get note alternation test working properly
+  NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_16Bit;
+  NRF_TIMER3->CC[0] = 10000;
+  NRF_TIMER3->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
+  NVIC_EnableIRQ(TIMER3_IRQn);
+
+  NRF_TIMER4->MODE = TIMER_MODE_MODE_Timer;
+  NRF_TIMER4->TASKS_CLEAR = 1;
+  NRF_TIMER4->PRESCALER = 7; //TODO Ensure this makes a reasonable LED blink speed
+  NRF_TIMER4->BITMODE = TIMER_BITMODE_BITMODE_16Bit;
+  NRF_TIMER4->CC[0] = 10000;
+  NRF_TIMER4->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
+  NVIC_EnableIRQ(TIMER4_IRQn);
+
+  NRF_TIMER3->TASKS_START = 1;
+  NRF_TIMER4->TASKS_START = 1;
+}
+
+
+//Inits on-board LED's
+void initIndication() {
+  nrf_gpio_cfg_output(LED_BLUE);
+  nrf_gpio_cfg_output(LED_GREEN);
+  ledIndicate(-1);
+  ledIndicate(LED_POWER);
+}
+
+
+//Initializes the key_array
+void setup_key_array(int num_keys){
     int key_led = 0;
     int width = 2; // For now we'll make each key two LEDs wide. Actually pretty darn close!
     for(int k = 0; k < num_keys; k++){
-        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false, .color = OFF};
+        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false};
         key_led += width;
     }
 }
 
 
-void updateKeys() {
-    for(int i = 0; i < num_keys; i++) {
-        Key current_key = key_array[i];
-        for(int j = current_key.starting_led; j < current_key.starting_led + current_key.num_led; j++){
-            set_led(j, current_key.color);
-        }
+//Initializes LED strip for operation
+void initialize_led_strip(int ledNum, int pinNum, int keyNum){
+    num_keys = keyNum;
+    num_leds = ledNum;
+    led_pin = pinNum;
+
+    //Critical Memory Allocation
+    buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
+    if (buffer == NULL) {
+        printf("Memory Limit Reached, LED Buffer allocation failed :(\r\n");
+        return;
     }
-    update_led_strip();
+    key_array = malloc(sizeof(*key_array) * num_keys);
+    if (key_array == NULL) {
+        printf("Memory Limit Reached, Key Array allocation failed :(\r\n");
+        return;
+    }
+    //End Critical Memory Allocation
+
+    setup_key_array(num_keys);
+    for(int i = num_leds * 24; i < num_leds * 24 + 40; i++){
+        buffer[i] = 0x8000;
+    }
+    setup_led_pwm_dma();
+    fill_color(OFF);
+    start_timer();
+
+    //Test Functions
+    //fill_test();
 }
 
 
+
+//--- Low Level LED Functions ---//
+
+//Updates the LED strip with new color (Do not call this too often)
 void update_led_strip(){
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
 }
 
 
-void fill_color(Color color){
-    for(int n = 0; n < num_leds; n++){
-        set_led(n, color);
-    }
-}
-
-
-bool isLearnSetFinished(){
-    for(int i = 0; i < num_keys; i++) {
-        Key current_key = key_array[i];
-        bool wtfsegger = (current_key.systemLit && !current_key.userLit);
-        if((current_key.systemLit && !current_key.userLit) || (!current_key.systemLit && current_key.userLit)) {
-            return false;
+/*
+//Polls the key_array for led changes and then pushes an update (quite slow)
+//NOTE NOT IN USE
+void updateKeys() {
+    bool keyChanged = false //this should be a global, but put here since not in use
+    if(keyChanged) {
+        for(int i = 0; i < num_keys; i++) {
+            Key current_key = key_array[i];
+            for(int j = current_key.starting_led; j < current_key.starting_led + current_key.num_led; j++){
+                set_led(j, current_key.color);
+            }
         }
+        keyChanged = false;
     }
-    return true;
+    update_led_strip();
+}
+*/
+
+
+//Controls on-board indication LED's
+void ledIndicate(int action) {
+  NRF_TIMER4->TASKS_STOP = 1;
+  switch(action) {
+    case LED_POWER:
+      nrf_gpio_pin_set(LED_GREEN);
+      break;
+    case LED_IDLE:
+      nrf_gpio_pin_clear(LED_BLUE);
+      break;
+    case LED_ADVERTISING:
+      NRF_TIMER4->TASKS_START = 1;
+      break;
+    case LED_CONNECTED:
+      nrf_gpio_pin_set(LED_BLUE);
+      break;
+    default:
+      nrf_gpio_pin_clear(LED_GREEN);
+      nrf_gpio_pin_clear(LED_BLUE);
+  }
 }
 
 
-void led_connect_animation(){ //TODO
-    // Will need to figure out how to delay something so we can make an animation.
-    //fill_color(RED);
-}
-
-
+//Sets the color of a single LED
 void set_led(int led_num, Color color){
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
     int led_ind = led_num * 24;
@@ -149,6 +195,13 @@ void set_led(int led_num, Color color){
 }
 
 
+//Checks if 2 colors are the same
+bool areSameColor(Color a, Color b){
+    return (a.red == b.red && a.green == b.green && a.blue == b.blue);
+}  
+
+
+//Returns an LED's color
 Color get_led_color(int led_num){
     uint32_t col = 0;
     int led_ind = led_num *24;
@@ -166,33 +219,56 @@ Color get_led_color(int led_num){
 }
 
 
-Color get_key_color(uint8_t key_num){
-    return get_led_color(key_array[key_num].starting_led);
+//Fills the LED strip with 1 color
+void fill_color(Color color){
+    for(int n = 0; n < num_leds; n++){
+        set_led(n, color);
+    }
 }
 
 
+//Fills LED strip wil alternating red and blue
+void fill_test(){
+  for(int n = 0; n < num_leds; n++){
+     if (n % 2 == 0) {
+      set_led(n, RED);
+    } else {
+      set_led(n, BLUE);
+    }
+  }
+}
+
+
+//--- High Level Key Functions ---//
+
+//Sets a key's color and the origin of the color (user or system)
 void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color color){
     if(key_num >= 88){
         return;
     }
     Key* current_key = &key_array[key_num];
     if(!keyOn || velocity == 0){
-        current_key->color = OFF;
+        color = OFF;
         if(isSystemLit)
             current_key->systemLit = false;
         else  
             current_key->userLit = false;
     }
     else {
-        current_key->color = color;
         if(isSystemLit)
             current_key->systemLit = true;
         else  
             current_key->userLit = true;
     }
+
+    for(int j = current_key->starting_led; j < current_key->starting_led + current_key->num_led; j++){
+      set_led(j, color);
+    }
 }
 
 
+//Sets a key's color based on velocity 
+//NOTE: This functuon should only be used in PA/VIS mode due to isSystemLit being set to true in set_key
 void set_key_velocity(uint8_t key_num, bool keyOn, int velocity){
     Color color = (Color) {.red = 0, .green = 63, .blue = 0};
     if(!keyOn) {
@@ -211,11 +287,16 @@ void set_key_velocity(uint8_t key_num, bool keyOn, int velocity){
 }
 
 
-bool areSameColor(Color a, Color b){
-    return (a.red == b.red && a.green == b.green && a.blue == b.blue);
-}  
+//Does nothing right now
+void set_key_play(uint8_t key_num, bool keyOn, int velocity){ //TODO 
+    // NOTE: We can make this do something if we want.
+    // This function is called in PA Mode when a key is pressed.
+    ;
+}
 
 
+
+//Sets key lights in LTP mode
 void set_key_learn(uint8_t key_num, bool keyOn, int velocity){
     Key* current_key = &key_array[key_num];
     if(keyOn) {
@@ -238,74 +319,26 @@ void set_key_learn(uint8_t key_num, bool keyOn, int velocity){
 }
 
 
-void set_key_play(int key_num, int stat){ //TODO 
-    // NOTE: We can make this do something if we want.
-    // This function is called in PA Mode when a key is pressed.
+//Returns a key's color
+Color get_key_color(uint8_t key_num){
+    return get_led_color(key_array[key_num].starting_led);
 }
 
 
-void fill_test(){
-  Color red = (Color) {.red = 0, .green = 32, .blue = 0};
-  Color blue = (Color) {.red = 0, .green = 0, .blue = 32};
-  for(int n = 0; n < num_leds; n++){
-     if (n % 2 == 0) {
-      set_led(n, red);
-    } else {
-      set_led(n, blue);
+//Returns if the current LTP note set is complete
+bool isLearnSetFinished(){
+    for(int i = 0; i < num_keys; i++) {
+        Key current_key = key_array[i];
+        if((current_key.systemLit && !current_key.userLit) || (!current_key.systemLit && current_key.userLit)) {
+            return false;
+        }
     }
-  }
+    return true;
 }
 
 
-void initialize_led_strip(int ledNum, int pinNum, int keyNum){
-    num_keys = keyNum;
-    num_leds = ledNum;
-    led_pin = pinNum;
-    buffer = malloc(sizeof(*buffer) * num_leds * 24 + sizeof(*buffer) * 40);
-    if (buffer == NULL){
-        printf("Memory Limit Reached :(");
-    }
-    key_array = malloc(sizeof(*key_array) * num_keys);
-    setup_key_array(num_keys);
-    for(int i = num_leds * 24; i < num_leds * 24 + 40; i++){
-        buffer[i] = 0x8000;
-    }
-    setup_led_pwm_dma();
-    fill_color((Color) {.red=0, .green=0, .blue=0});
-    start_timer();
-
-    keysPressed = 0; // TODO: Set to zero on LTP MODE Entry. Make sure it's never negative.
-    incorrectKeys = 0;
-    //fill_test();
-}
-
-//Inits on-board LED's
-void initIndication() {
-  nrf_gpio_cfg_output(LED_BLUE);
-  nrf_gpio_cfg_output(LED_GREEN);
-  ledIndicate(-1);
-  ledIndicate(LED_POWER);
-}
-
-
-//Controls on-board indication LED's
-void ledIndicate(int action) {
-  advertisingBLE = false;
-  switch(action) {
-    case LED_POWER:
-      nrf_gpio_pin_set(LED_GREEN);
-      break;
-    case LED_IDLE:
-      nrf_gpio_pin_clear(LED_BLUE);
-      break;
-    case LED_ADVERTISING:
-      advertisingBLE = true;
-      break;
-    case LED_CONNECTED:
-      nrf_gpio_pin_set(LED_BLUE);
-      break;
-    default:
-      nrf_gpio_pin_clear(LED_GREEN);
-      nrf_gpio_pin_clear(LED_BLUE);
-  }
+//Plays an animation on the LED strip upon BLE connection
+void led_connect_animation(){ //TODO
+    // Will need to figure out how to delay something so we can make an animation. ~ just put the system into PA and play a file hidden from the user
+    //fill_color(RED);
 }
