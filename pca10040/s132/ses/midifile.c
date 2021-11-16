@@ -176,6 +176,8 @@ unsigned long read_next_midi_data(){
 static void correct_delay_handler(void* p_context){
     MidiEvent* mevt = (MidiEvent*) p_context;
     set_key(mevt->note, true, true, mevt->velocity, LEARN_COLOR);
+    if(mevt != NULL)
+        free(mevt);
 }
 
 
@@ -187,20 +189,21 @@ void learn_next_midi_data(){
         evt &= 0xF0;
         if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
-            if(evt == 0x90){
-                /*//TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
-                if(key_array[mevt.note].userLit){
+            if(evt == 0x90) {
+                //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
+                if(key_array[mevt.note].userLit) {
                     //set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+                    MidiEvent* delayEvent = malloc(sizeof(MidiEvent));
                     APP_TIMER_DEF(correct_delay);
                     ret_code_t err_code;
                     err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
                     APP_ERROR_CHECK(err_code);
 
-                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), &mevt);
+                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), delayEvent);
                     APP_ERROR_CHECK(err_code);
                 }
-                else*/
-                  set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+                else
+                    set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
             } 
             else {
                 set_key(mevt.note, false, true, mevt.velocity, OFF);

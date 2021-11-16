@@ -1092,10 +1092,6 @@ static void midi_delay_done_handler(void* p_context){
     midi_delay(next_delay_ms); 
 }
 
-void input_delay(){
-    // This function will wait for user input on the required keys to move on.
-
-}
 
 void midi_delay(unsigned long time_ms){
     if (currentMode == VIS) {
