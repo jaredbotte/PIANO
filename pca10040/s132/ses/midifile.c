@@ -196,7 +196,7 @@ void learn_next_midi_data(){
                     err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
                     APP_ERROR_CHECK(err_code);
 
-                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(1), &mevt);
+                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), &mevt);
                     APP_ERROR_CHECK(err_code);
                 }
                 else*/

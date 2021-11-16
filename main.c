@@ -428,7 +428,16 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             tempoChanged = true;
             return;
          }
-    
+        
+         if (strncmp(&data, "CheckSD", 7) == 0) {
+            hasSDCard = nrf_gpio_pin_read(30);
+            if(hasSDCard){
+                send_Message("hasSD");
+            } else {
+                send_Message("noSD");
+            }
+         }
+
          if (tempoChanged == true){
             data[strlen(data) - 1] = '\0';
             //printf("data: %s\r\n", data);
@@ -1113,7 +1122,7 @@ void midi_delay(unsigned long time_ms){
 
 void midi_operations() {
     if (stateChanged){
-        //hasSDCard = !nrf_gpio_pin_read(30);
+        resetKeys();
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
         //TODO clear all user lit keys before we go into LTP, and when we exit we clear all system lit keys!!!
         if (currentMode == LTP && hasSDCard){
@@ -1160,7 +1169,7 @@ int main(void)
     fatfs_init();
 
     // Initializing chip detect pin.
-    //nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
 
     // Start execution.
     printf("\r\nUART started.\r\n");

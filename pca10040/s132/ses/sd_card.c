@@ -61,6 +61,45 @@ void fatfs_init(){
 
 }
 
+bool checkSD() {
+    static FATFS fs;
+    static DIR dir;
+    static FILINFO fno;
+    static FIL file;
+
+    FRESULT ff_result;
+    ff_result = f_mount(&fs, "", 1);
+    if (ff_result)
+    {
+        printf("Mount failed\r\n");
+        print_error(ff_result);
+
+        return false;
+    }
+
+    // Listing directory
+    ff_result = f_opendir(&dir, "/");
+
+    if (ff_result) {
+        printf("Directory listing failed!\r\n");
+        print_error(ff_result);
+        return false;
+    }
+
+    do {
+        ff_result = f_readdir(&dir, &fno);
+        
+        if (ff_result != FR_OK) {
+            printf("Directory reading failed!\r\n");
+            print_error(ff_result);
+            return false;
+        }
+    }while (fno.fname[0]);
+
+    return true;
+
+}
+
 void print_error(FRESULT fr)
 {
     const char *errs[] = {

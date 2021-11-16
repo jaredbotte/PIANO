@@ -346,6 +346,15 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
 }
 
 
+void resetKeys() {
+    for(int i = 0; i < num_keys; i++) {
+        key_array[i].systemLit = false;
+        key_array[i].userLit = false;
+        
+    }
+}
+
+
 //Plays an animation on the LED strip upon BLE connection
 void led_connect_animation(){ //TODO
     // Will need to figure out how to delay something so we can make an animation. ~ just put the system into PA and play a file hidden from the user
