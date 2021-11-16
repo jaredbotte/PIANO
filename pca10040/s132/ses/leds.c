@@ -189,7 +189,7 @@ void ledIndicate(int action) {
 void set_led(int led_num, Color color){
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
     int led_ind = led_num * 24;
-    for(int i = 0; i < 24; i++){
+    for(int i = 0; i < 24; i++) {
         buffer[led_ind + i] = (((col & (1 << (23 - i))) >> (23 - i)) * 6 + 6) | 0x8000;
     }
 }
@@ -249,19 +249,21 @@ void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color 
     Key* current_key = &key_array[key_num];
     if(!keyOn || velocity == 0){
         color = OFF;
-        if(isSystemLit) //NOTE is it nessescary to differentiate between the user and system if we turn the key off?
-        {
+        if(isSystemLit) {
             current_key->systemLit = false;
             printf("Turning system LED off\r\n");
         }
-        else
+        else {
             current_key->userLit = false;
+        }
     }
     else {
-        if(isSystemLit)
+        if(isSystemLit) {
             current_key->systemLit = true;
-        else  
+        }
+        else {
             current_key->userLit = true;
+        }
     }
 
     for(int j = current_key->starting_led; j < current_key->starting_led + current_key->num_led; j++){
