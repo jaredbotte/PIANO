@@ -175,6 +175,7 @@ unsigned long read_next_midi_data(){
 
 static void correct_delay_handler(void* p_context){
     MidiEvent* mevt = (MidiEvent*) p_context;
+    printf("Delay key %i\r\n", mevt->note);
     set_key(mevt->note, true, true, mevt->velocity, LEARN_COLOR);
     if(mevt != NULL)
         free(mevt);
@@ -192,7 +193,7 @@ void learn_next_midi_data(){
             if(evt == 0x90) {
                 //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
                 if(key_array[mevt.note].userLit) {
-                    //set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+                    set_key(mevt.note, true, true, mevt.velocity, CORRECT_COLOR);
                     MidiEvent* delayEvent = malloc(sizeof(MidiEvent));
                     APP_TIMER_DEF(correct_delay);
                     ret_code_t err_code;

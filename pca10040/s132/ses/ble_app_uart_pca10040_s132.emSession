@@ -68,8 +68,8 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="42" y="1115" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="1078" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="22" y="201" useTextEdit="1" openedFrom="E:/Programs/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="midifile.c" selected="0" top="175" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="6" y="1115" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../main.c" selected="0" top="943" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="49" y="197" useTextEdit="1" openedFrom="E:/Programs/SEGGER/nRF5/examples/PIANO/PIANO/main.c" useBinaryEdit="0" left="0" path="midifile.c" selected="1" top="172" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="29" y="43" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="sd_card.h" selected="0" top="23" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="26" y="28" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="midifile.h" selected="0" top="6" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="6159" useTextEdit="1" openedFrom="E:/Programs/SEGGER/nRF5/components/libraries/timer/app_timer2.c" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="6134" codecName="Default"/>
