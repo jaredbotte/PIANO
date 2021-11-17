@@ -46,10 +46,6 @@
 #include "nrf_uarte.h"
 #endif
 
-// fatfs
-#define FILE_NAME "Test with bluetooth.txt"
-#define TEST_STRING "This is a test string."
-
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
@@ -81,9 +77,10 @@ bool rChanged       = false;
 bool gChanged       = false;
 bool bChanged       = false;
 bool writeEnable    = false;
-bool bufferBusy = false;
-bool bufferLock = false;
-bool transfer_over = false;
+bool bufferBusy     = false;
+bool bufferLock     = false;
+bool transfer_over  = false;
+bool prevSD         = false;
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
 volatile bool transferStarted = false;
@@ -119,15 +116,28 @@ void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
 }
 
+void send_Message (char* msg) {
+    uint16_t size = strlen(msg);
+    ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
+}
+
 void TIMER3_IRQHandler(void)
 {
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
   app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
-}
 
-void send_Message (char* msg) {
-    uint16_t size = strlen(msg);
-    ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
+  //NOTE have not been tested
+  hasSDCard = nrf_gpio_pin_read(30);
+
+  if (hasSDCard != prevSD) {
+    if (hasSDCard) {
+      send_Message("hasSD");
+    }
+    else{
+      send_Message("noSD");
+    }
+    prevSD = hasSDCard;
+  }
 }
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
