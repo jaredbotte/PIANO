@@ -80,7 +80,7 @@ bool writeEnable    = false;
 bool bufferBusy     = false;
 bool bufferLock     = false;
 bool transfer_over  = false;
-bool prevSD         = false;
+volatile bool prevSD         = false;
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
 volatile bool transferStarted = false;
@@ -128,15 +128,16 @@ void TIMER3_IRQHandler(void)
 
   //NOTE have not been tested
   hasSDCard = nrf_gpio_pin_read(30);
-
-  if (hasSDCard != prevSD) {
-    if (hasSDCard) {
-      send_Message("hasSD");
+  if (isConnected) {
+    if (hasSDCard != prevSD) {
+      if (hasSDCard) {
+        send_Message("hasSD");
+      }
+      else{
+        send_Message("noSD");
+      }
+      prevSD = hasSDCard;
     }
-    else{
-      send_Message("noSD");
-    }
-    prevSD = hasSDCard;
   }
 }
 
