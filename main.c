@@ -46,10 +46,6 @@
 #include "nrf_uarte.h"
 #endif
 
-// fatfs
-#define FILE_NAME "Test with bluetooth.txt"
-#define TEST_STRING "This is a test string."
-
 // BLE
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
@@ -81,9 +77,10 @@ bool rChanged       = false;
 bool gChanged       = false;
 bool bChanged       = false;
 bool writeEnable    = false;
-bool bufferBusy = false;
-bool bufferLock = false;
-bool transfer_over = false;
+bool bufferBusy     = false;
+bool bufferLock     = false;
+bool transfer_over  = false;
+volatile bool prevSD         = false;
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
 volatile bool transferStarted = false;
@@ -95,9 +92,9 @@ volatile bool velo = false;
 Color userColor = GREEN;
 volatile Mode currentMode;
 char filename[12];
+//char fileToPlay[12] = {0x50,0x48,0x49,0x4c,0x30,0x2e,0x4d,0x49,0x44,0x0d,0x00,0x00}; //this is phil0
 char fileToPlay[12];
 int bytes_w = 0, bytes_s = 0, num_received = 0, num_written = 0;
-int numKeysToPress = 0;
 static int noteFlag = 0;
 static uint8_t lastEvent = 0;
 static uint8_t keyNum = 0x00;
@@ -119,16 +116,29 @@ void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
 }
 
-void TIMER3_IRQHandler(void)
-{
-  NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
-  //update_led_strip();
-  app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
-}
-
 void send_Message (char* msg) {
     uint16_t size = strlen(msg);
     ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
+}
+
+void TIMER3_IRQHandler(void)
+{
+  NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
+  app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
+
+  //NOTE have not been tested
+  hasSDCard = nrf_gpio_pin_read(30);
+  if (isConnected) {
+    if (hasSDCard != prevSD) {
+      if (hasSDCard) {
+        send_Message("hasSD");
+      }
+      else{
+        send_Message("noSD");
+      }
+      prevSD = hasSDCard;
+    }
+  }
 }
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
@@ -429,7 +439,16 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             tempoChanged = true;
             return;
          }
-    
+        
+         if (strncmp(&data, "CheckSD", 7) == 0) {
+            hasSDCard = nrf_gpio_pin_read(30);
+            if(hasSDCard){
+                send_Message("hasSD");
+            } else {
+                send_Message("noSD");
+            }
+         }
+
          if (tempoChanged == true){
             data[strlen(data) - 1] = '\0';
             //printf("data: %s\r\n", data);
@@ -907,21 +926,18 @@ void uart_event_handle(app_uart_evt_t * p_event)
             }
             else if(noteFlag == 2) //Velocity info
             {
-              int type = lastEvent == 0x90 ? 1 : 0; 
+              bool type = lastEvent == 0x90 ? true : false; 
               if (currentMode == VIS) {
-                if (velo){
-                    set_key_velocity(keyNum, type, eventUART);
-                }else{
-                    set_key(keyNum, type, eventUART, userColor);
-                }
+                if (velo) set_key_velocity(keyNum, type, eventUART);
+                else set_key(keyNum, type, false, eventUART, userColor);
               } 
               else if (currentMode == PA) {
                 set_key_play(keyNum, type, eventUART);
               } 
               else if (currentMode == LTP) {
                 set_key_learn(keyNum, type, eventUART);
-                if(isNoteFinished(numKeysToPress)){
-                    learn_next_midi_data(&numKeysToPress);
+                if(isLearnSetFinished()) {
+                    learn_next_midi_data();
                     //printf("keys to press: %d\r\n", numKeysToPress);
                 }
               }
@@ -1045,17 +1061,6 @@ static void advertising_init(void)
 }
 
 
-/**@brief Function for initializing the nrf log module.
- */
-static void log_init(void)
-{
-    ret_code_t err_code = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(err_code);
-
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
-}
-
-
 /**@brief Function for initializing power management.
  */
 static void power_management_init(void)
@@ -1085,23 +1090,15 @@ static void advertising_start(void)
 }
 
 void midi_scheduled_event(void* p_event_data, uint16_t event_size){
-    //printf("midi_scheduled_event started\r\n");
     unsigned long next_delay_ms = read_next_midi_data();
     midi_delay(next_delay_ms); 
 }
 
 static void midi_delay_done_handler(void* p_context){
-    UNUSED_PARAMETER(p_context);
-    //app_sched_event_put(&sd_evt, sizeof(sd_evt), midi_scheduled_event);
     unsigned long next_delay_ms = read_next_midi_data();
-    printf("Delaying %d ms\r\n", next_delay_ms);
     midi_delay(next_delay_ms); 
 }
 
-void input_delay(){
-    // This function will wait for user input on the required keys to move on.
-
-}
 
 void midi_delay(unsigned long time_ms){
     if (currentMode == VIS) {
@@ -1128,14 +1125,13 @@ void midi_delay(unsigned long time_ms){
 
 void midi_operations() {
     if (stateChanged){
-        //hasSDCard = !nrf_gpio_pin_read(30);
+        resetKeys();
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
+        //TODO clear all user lit keys before we go into LTP, and when we exit we clear all system lit keys!!!
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
-            numKeysToPress = 0;
-            reset_ltp();
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
-            learn_next_midi_data(&numKeysToPress);
+            learn_next_midi_data();
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");
@@ -1155,9 +1151,11 @@ void midi_operations() {
 
 /**@brief Application main function.
  */
-int main(void)
+int main(void) 
 {
-    currentMode = VIS;
+    //currentMode = VIS;
+    //currentMode = LTP;
+    //stateChanged = true;
 
     // Initialize BLE.
     uart_init();
@@ -1174,15 +1172,15 @@ int main(void)
     fatfs_init();
 
     // Initializing chip detect pin.
-    //nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
 
     // Start execution.
     printf("\r\nUART started.\r\n");
+    initIndication();
     advertising_start();
 
     // LEDs
-    initialize_led_strip(288, 25);
-    initIndication();
+    initialize_led_strip(288, 25, 88);
     //fill_color(RED);
 
     //midi_delay(init_midi_file("TEST.MID"));

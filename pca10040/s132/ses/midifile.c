@@ -2,11 +2,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "midifile.h"
+#include "app_timer.h"
+#include "app_scheduler.h"
 
 bool endFlag = false;
 typedef enum states{VIS, LTP, PA}Mode;
 float tempoDiv = 1.0;
 extern currentMode;
+extern Key* key_array;
+extern sd_evt;
 uint8_t last_event;
 
 uint8_t get_next_byte(){
@@ -77,7 +81,6 @@ unsigned long get_variable_data()
          value = (value << 7) + ((c = get_next_byte()) & 0x7F);
        } while (c & 0x80);
     }
-    //printf("%ld\r\n", value);
     return value;
 }
 
@@ -135,65 +138,26 @@ uint8_t read_next_track_event(){
     return evt;
 } 
 
-/*uint8_t read_next_track_event(){
-// TODO: USE SWITCH
-    uint8_t evt = get_next_byte();
-    //printf("Found track event %X\n\r", evt);
-    if (evt == 0xFF){
-        get_meta_event();
-    } else if (evt == 0xF0){
-        //printf("Found some text.\r\n");
-        unsigned long len = get_variable_data();
-        printf("Length rcvd:%x\r\n",len);
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
-    } else if (evt == 0xF7){
-        //printf("Found some stuff. Skipping it.\r\n");
-        unsigned long len = get_variable_data();
-        printf("Length rcvd:%x\r\n",len);
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + len);
-    }  else if ((evt & 0xF0) == 0xC0 || (evt & 0xF0) == 0xD0) {
-        //printf("MIDI track event.\r\n");
-        //UNUSED_VARIABLE(get_next_byte()); // No clue what this is but causes mass chaos if not removed.
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 1);
-    } else if ((evt & 0xF0) == 0xA0 || (evt & 0xF0) == 0xB0 || (evt & 0xF0) == 0xE0){ 
-        //UNUSED_VARIABLE(get_next_byte());
-        //UNUSED_VARIABLE(get_next_byte());
-        f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + 2);
-    }else if ((evt& 0xf0) == 0x90 || (evt & 0xf0) == 0x80){
-        //Don't do anything!
-    }else {
-        // RUNNING EVENT - PARSE APPROPRIATELY
-        UINT loc = f_tell(&midi_file.ptr);
-        printf("%x %X NOT KNOWN!\r\n", loc, evt);
-        evt = read_next_track_event();
-    }
-    last_event = evt;
-    return evt;
-}*/
-
 unsigned long read_next_midi_data(){
     unsigned long delay = 0;
-    while(!endFlag && delay == 0) {
-        uint8_t evt = (read_next_track_event());
-        evt &= 0xF0;
-        if (evt == 0x90 || evt == 0x80) {
-            MidiEvent mevt = get_midi_event(evt);
-            if (evt == 0x90) {
-                set_key(mevt.note, 1, mevt.velocity, BLUE);
-            } else {
-                set_key(mevt.note, 0, mevt.velocity, OFF);
-            }
+    uint8_t evt = (read_next_track_event());
+    uint8_t chan = evt & 0xF;
+    evt &= 0xF0;
+    if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
+      MidiEvent mevt = get_midi_event(evt);
+      if (evt == 0x90) {
+        set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+      } 
+      else {
+        set_key(mevt.note, false, true, mevt.velocity, OFF);
         }
-        delay = get_variable_data();
     }
+    delay = get_variable_data();
 
     if (endFlag) {
       return -1;
     }
-
-    double delay_ms = delay * midi_file.mseconds_per_tick;
-    unsigned long delay_ms_int= (unsigned long)delay_ms;
-    //printf("Delaying %ld ms\r\n", delay_ms_int);
+    unsigned long delay_ms = delay * midi_file.mseconds_per_tick;
 
     // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
     uint32_t fpscr_reg = __get_FPSCR();
@@ -202,29 +166,50 @@ unsigned long read_next_midi_data(){
     // Clear the pending FPU interrupt. Necessary when the application uses a SoftDevice with sleep modes
     NVIC_ClearPendingIRQ(FPU_IRQn);
 
-    return delay_ms_int;
+    return delay_ms;
 }
 
-void learn_next_midi_data(int* numKeys){
+
+static void correct_delay_handler(void* p_context){
+    MidiEvent* mevt = (MidiEvent*) p_context;
+    if(mevt != NULL) {
+        printf("Delay key %i\r\n", mevt->note);
+        set_key(mevt->note, true, true, mevt->velocity, LEARN_COLOR);
+        free(mevt);
+    }
+    printf("BAD TIMES\r\n");
+
+}
+
+
+void learn_next_midi_data(){
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
+        uint8_t chan = evt & 0xF;
         evt &= 0xF0;
-        if (evt == 0x90 || evt == 0x80) {
+        if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
             MidiEvent mevt = get_midi_event(evt);
-            if(evt == 0x90){
-                if(!areSameColor(get_key_color(mevt.note), GREEN)){
-                    (*numKeys)++;
+            if(evt == 0x90) {
+                //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
+                /*if(key_array[mevt.note].userLit) {
+                    MidiEvent* delayEvent = malloc(sizeof(MidiEvent));
+                    APP_TIMER_DEF(correct_delay);
+                    ret_code_t err_code;
+                    err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
+                    APP_ERROR_CHECK(err_code);
+
+                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), delayEvent);
+                    APP_ERROR_CHECK(err_code);
                 }
-                set_key(mevt.note, 1, mevt.velocity, BLUE);
-            } else {
-                set_key(mevt.note, 0, mevt.velocity, RED);
-                addIncorrect();
-                (*numKeys)--;
+                else*/
+                    set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+            } 
+            else {
+                set_key(mevt.note, false, true, mevt.velocity, OFF);
             }
         }
         delay = get_variable_data();
-        //f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) + get_variable_data());
     }
     
     if (endFlag) {

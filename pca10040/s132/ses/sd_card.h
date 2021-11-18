@@ -39,6 +39,8 @@ void fileWrite(void* p_event_data, uint16_t event_size);
 
 void fatfs_init ();
 
+bool checkSD();
+
 void write_to_file (uint8_t* data, int size, char* filename);
 
 void print_error(FRESULT fr);
