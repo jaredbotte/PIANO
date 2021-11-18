@@ -1090,16 +1090,12 @@ static void advertising_start(void)
 }
 
 void midi_scheduled_event(void* p_event_data, uint16_t event_size){
-    //printf("midi_scheduled_event started\r\n");
     unsigned long next_delay_ms = read_next_midi_data();
     midi_delay(next_delay_ms); 
 }
 
 static void midi_delay_done_handler(void* p_context){
-    UNUSED_PARAMETER(p_context);
-    //app_sched_event_put(&sd_evt, sizeof(sd_evt), midi_scheduled_event);
     unsigned long next_delay_ms = read_next_midi_data();
-    printf("Delaying %d ms\r\n", next_delay_ms);
     midi_delay(next_delay_ms); 
 }
 

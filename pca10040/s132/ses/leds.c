@@ -63,7 +63,7 @@ void setup_led_pwm_dma() {
 void start_timer() {		
   NRF_TIMER3->MODE = TIMER_MODE_MODE_Timer;
   NRF_TIMER3->TASKS_CLEAR = 1;
-  NRF_TIMER3->PRESCALER = 3; //TODO play with this to see if we can get note alternation test working properly
+  NRF_TIMER3->PRESCALER = 3; //cannot display 1/128 notes proerly
   NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_16Bit;
   NRF_TIMER3->CC[0] = 10000;
   NRF_TIMER3->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
@@ -71,7 +71,7 @@ void start_timer() {
 
   NRF_TIMER4->MODE = TIMER_MODE_MODE_Timer;
   NRF_TIMER4->TASKS_CLEAR = 1;
-  NRF_TIMER4->PRESCALER = 7; //TODO Ensure this makes a reasonable LED blink speed
+  NRF_TIMER4->PRESCALER = 7;
   NRF_TIMER4->BITMODE = TIMER_BITMODE_BITMODE_16Bit;
   NRF_TIMER4->CC[0] = 10000;
   NRF_TIMER4->INTENSET = (TIMER_INTENSET_COMPARE0_Enabled << TIMER_INTENSET_COMPARE0_Pos);
@@ -251,7 +251,6 @@ void set_key(uint8_t key_num, bool keyOn, bool isSystemLit, int velocity, Color 
         color = OFF;
         if(isSystemLit) {
             current_key->systemLit = false;
-            printf("Turning system LED off\r\n");
         }
         else {
             current_key->userLit = false;
@@ -315,7 +314,7 @@ void set_key_learn(uint8_t key_num, bool keyOn, int velocity){
     else {
         if(current_key->systemLit) {
             current_key->userLit = false;
-            set_key(key_num, true, true, velocity, LEARN_COLOR);
+            set_key(key_num, true, true, 1, LEARN_COLOR); //letting go of the key softly should never trigger an off event
         }
         else {
             set_key(key_num, false, false, velocity, OFF);
@@ -337,11 +336,11 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
         Key current_key = key_array[i];
         if((current_key.systemLit && !current_key.userLit)) { //User hasn't pressed a key
             finished = false;
-            set_key(i, true, true, 100, LEARN_COLOR);
+            set_key(i, true, true, 1, LEARN_COLOR);
         }
         if((!current_key.systemLit && current_key.userLit)) { //User is pressing an incorrect key
             finished = false;
-            set_key(i, true, false, 100, INCORRECT_COLOR);
+            set_key(i, true, false, 1, INCORRECT_COLOR);
         }
     }
     return finished;
@@ -351,8 +350,7 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
 void resetKeys() {
     for(int i = 0; i < num_keys; i++) {
         key_array[i].systemLit = false;
-        key_array[i].userLit = false;
-        
+        key_array[i].userLit = false;        
     }
 }
 
