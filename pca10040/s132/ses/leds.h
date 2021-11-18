@@ -39,7 +39,7 @@ typedef struct _Key {
     bool userLit;\
 } Key;
 
-//Init functiuons
+//Init functions
 void setup_led_pwm_dma();
 void start_timer();
 void initIndication();

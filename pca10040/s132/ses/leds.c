@@ -96,11 +96,13 @@ void setup_key_array(int num_keys){
     int key_led = 0;
     int width = 2; // For now we'll make each key two LEDs wide. Actually pretty darn close!
     for(int k = 0; k < num_keys; k++){
-        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false};
+        if(k == 88 - 16){
+            key_led--;
+        }
+        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false .userLit = false};
         key_led += width;
     }
 }
-
 
 //Initializes LED strip for operation
 void initialize_led_strip(int ledNum, int pinNum, int keyNum){
@@ -135,9 +137,6 @@ void initialize_led_strip(int ledNum, int pinNum, int keyNum){
 
 
 
-//--- Low Level LED Functions ---//
-
-//Updates the LED strip with new color (Do not call this too often)
 void update_led_strip(){
     NRF_PWM0 -> TASKS_SEQSTART[0] = 1;
 }
@@ -345,7 +344,6 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
     }
     return finished;
 }
-
 
 void resetKeys() {
     for(int i = 0; i < num_keys; i++) {
