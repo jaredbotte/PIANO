@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include "nordic_common.h"
 #include "nrf.h"
 #include "ff.h"
@@ -26,6 +27,7 @@
 #include "nrf_sdh_ble.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
+#include "nrf_gpio.h"
 #include "app_timer.h"
 #include "ble_nus.h"
 #include "app_uart.h"
@@ -116,17 +118,49 @@ void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
 }
 
+
+static void correct_delay_handler(void* p_context){
+    //MidiEvent* mevt = (MidiEvent*) p_context;
+    uint8_t* delayNote = (uint8_t*) p_context;
+    if(delayNote != NULL) {
+        printf("Delay key %i\r\n", delayNote);
+        set_key(*delayNote, true, true, 1, LEARN_COLOR);
+        free(delayNote);
+    }
+    printf("BAD TIMES\r\n");
+}
+
+
+void learnDelay (void* p_event_data, uint16_t event_size) {    
+    sd_write_evt* evt = (sd_write_evt*) p_event_data;
+    if(evt != NULL) {
+        uint8_t* delayNote = malloc(sizeof(uint8_t)); 
+        *delayNote = evt->note;
+        APP_TIMER_DEF(correct_delay);
+        ret_code_t err_code;
+        err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
+        APP_ERROR_CHECK(err_code);
+
+        err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), delayNote);
+        APP_ERROR_CHECK(err_code);
+        free(evt);
+    }
+    printf("SAD TIMES\r\n");
+}
+
+
 void send_Message (char* msg) {
     uint16_t size = strlen(msg);
     ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
 }
+
 
 void TIMER3_IRQHandler(void)
 {
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
   app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
 
-  //NOTE have not been tested
+  /*//NOTE have not been tested
   hasSDCard = nrf_gpio_pin_read(30);
   if (isConnected) {
     if (hasSDCard != prevSD) {
@@ -138,7 +172,7 @@ void TIMER3_IRQHandler(void)
       }
       prevSD = hasSDCard;
     }
-  }
+  }*/
 }
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
@@ -572,14 +606,14 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
             memset(filename,'\0', sizeof(filename));
-            resumeUARTRX();
+            //resumeUARTRX();
             return;
         }
         
         if (strncmp(&data, "File Transfer",13) == 0) {
             send_Message("Transfer");
             fileTransfer = true;
-            suspendUARTRX();
+            //suspendUARTRX();
             return;
         }
 
@@ -966,7 +1000,7 @@ static void uart_init(void)
     uint32_t                     err_code;
     app_uart_comm_params_t const comm_params =
     {
-        .rx_pin_no    = RX_PIN_NUMBER,
+        .rx_pin_no    = 8,
         .tx_pin_no    = 11,
         .rts_pin_no   = 8,
         .cts_pin_no   = 9,
@@ -984,22 +1018,6 @@ static void uart_init(void)
     APP_ERROR_CHECK(err_code);
 }
 /**@snippet [UART Initialization] */
-
-
-//Temporarily suspend external UART RX by changing its RX pin.
-void suspendUARTRX(int fakePin) {
-  noteFlag = 10;
-  nrf_delay_ms(1);
-  NRF_UART0 -> PSELRXD = fakePin;
-}
-
-
-//Re-enable UART RX after suspending it by changing the RX pin back.
-void resumeUARTRX() {
-  NRF_UART0 -> PSELRXD = RX_PIN_NUMBER;
-  nrf_delay_ms(1);
-  noteFlag = 0;
-}
 
 
 /**@brief Function for initializing the Advertising functionality.

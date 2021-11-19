@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "midifile.h"
-#include "app_timer.h"
+#include "sd_card.h"
 #include "app_scheduler.h"
 
 bool endFlag = false;
@@ -10,7 +10,7 @@ typedef enum states{VIS, LTP, PA} Mode;
 float tempoDiv = 1.0;
 extern currentMode;
 extern Key* key_array;
-extern sd_evt;
+extern learnDelay();
 uint8_t last_event;
 
 uint8_t get_next_byte(){
@@ -134,7 +134,7 @@ uint8_t read_next_track_event(){
                     runon = true;
             }
         }
-    }while(runon);
+    } while(runon);
     return evt;
 } 
 
@@ -150,7 +150,7 @@ unsigned long read_next_midi_data(){
       } 
       else {
         set_key(mevt.note, false, true, mevt.velocity, OFF);
-        }
+      }
     }
     delay = get_variable_data();
 
@@ -170,17 +170,6 @@ unsigned long read_next_midi_data(){
 }
 
 
-static void correct_delay_handler(void* p_context){
-    MidiEvent* mevt = (MidiEvent*) p_context;
-    if(mevt != NULL) {
-        printf("Delay key %i\r\n", mevt->note);
-        set_key(mevt->note, true, true, mevt->velocity, LEARN_COLOR);
-        free(mevt);
-    }
-    printf("BAD TIMES\r\n");
-}
-
-
 void learn_next_midi_data(){ //NOTE we will need to take a look at what we want LTP to actually do (discuss core functionality)
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
@@ -191,17 +180,13 @@ void learn_next_midi_data(){ //NOTE we will need to take a look at what we want 
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90) {
                 //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
-                /*if(key_array[mevt.note].userLit) {
-                    MidiEvent* delayEvent = malloc(sizeof(MidiEvent));
-                    APP_TIMER_DEF(correct_delay);
-                    ret_code_t err_code;
-                    err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
-                    APP_ERROR_CHECK(err_code);
-
-                    err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), delayEvent);
-                    APP_ERROR_CHECK(err_code);
+                if(key_array[mevt.note].userLit) {
+                    set_key(mevt.note, true, true, mevt.velocity, CORRECT_COLOR);
+                    sd_write_evt* evt = malloc(sizeof(sd_write_evt));
+                    evt->note = mevt.note;
+                    app_sched_event_put(evt, sizeof(*evt), learnDelay);
                 }
-                else*/
+                else
                     set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
             } 
             else {

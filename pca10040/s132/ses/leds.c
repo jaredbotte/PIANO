@@ -346,6 +346,7 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
 }
 
 void resetKeys() {
+    fill_color(OFF);
     for(int i = 0; i < num_keys; i++) {
         key_array[i].systemLit = false;
         key_array[i].userLit = false;        
