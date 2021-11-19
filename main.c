@@ -450,11 +450,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
          }
 
          if (tempoChanged == true){
-            data[strlen(data) - 1] = '\0';
-            //printf("data: %s\r\n", data);
-            //printf("Converted data: %f\r\n", stupid_atof(&data));
-        
-
+            data[strlen(data) - 1] = '\0';  
             setTempoDiv(stupid_atof(&data));
             tempoChanged = false;
          }
@@ -479,7 +475,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         // End of critical system commands!
 
         if (strncmp(&data, "write", 5) == 0){
-            //writeEnable = true;
             sd_evt.filename = "test.txt";
             app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
         }
@@ -499,14 +494,11 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         if (strncmp(&data, "green",5) == 0) {
             Color green = {.red = 0, .green = 60, .blue = 0};
             fill_color(green);
-            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
         }
 
         if (strncmp(&data, "off",3) == 0) {
             Color off = {.red = 0, .green = 0, .blue = 0};
             fill_color(off);
-            //err_code = ble_nus_data_send(&m_nus, "Turned_on", 9, m_conn_handle);
-
         }
 
         if (strncmp(&data, "Color_Changed",13) == 0) {
@@ -514,7 +506,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             rChanged == false;
             gChanged == false;
             bChanged == false;
-
             return;
         }
 
@@ -540,49 +531,37 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             else if (strncmp(&data, "blue",4) == 0) {
                 bChanged = true;
             }
-
             return;
         }
 
         if ((colorChanged == true) && (rChanged == true) && (gChanged == false) && (bChanged == false) && (strncmp(&data, "red",3) != 0)) {
             int color_value = atoi(&data);
             userColor.red = color_value;
-            printf("Red Color Val: %d\r\n",color_value);
 
             colorChanged = false;
             rChanged = false;
-
-            //return;
         }
         else if ((colorChanged == true) && (rChanged == false) && (gChanged == true) && (bChanged == false) && (strncmp(&data, "green",5) != 0)) {
             int color_value = atoi(&data);
             userColor.green = color_value;
-            //printf("Green Color Val: %d\r\n",color_value);
 
             colorChanged = false;
             gChanged = false;
-
-            //return;
         }
         else if ((colorChanged == true) && (rChanged == false) && (gChanged == false) && (bChanged == true) && (strncmp(&data, "blue",4) != 0)) {
             int color_value = atoi(&data);
             userColor.blue = color_value;
-            //printf("Blue Color Val: %d\r\n",color_value);
 
             colorChanged = false;
             bChanged = false;
-
-            //return;
         }
 
         if (strncmp(&data, "ListDIR",7) == 0) {
-            //list_Directory();
             app_sched_event_put(&sd_evt, sizeof(sd_evt), list_Directory);
         }
 
 
         // File transfer
-
         if (strncmp(&data, "EOF",3) == 0) {
             fileTransfer = false;
             transferStarted = false;
@@ -593,31 +572,26 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
             memset(filename,'\0', sizeof(filename));
-            
+            resumeUARTRX();
             return;
         }
         
         if (strncmp(&data, "File Transfer",13) == 0) {
             send_Message("Transfer");
             fileTransfer = true;
+            suspendUARTRX();
             return;
         }
 
-        if (fileTransfer && !transferStarted) {// seting filename
+        if (fileTransfer && !transferStarted) {
             strncpy(&filename, &data, 11);
             transferStarted = true;
-            //printf("File Name: %s\r\n", filename);
-            //printf("Filename size: %d\r\n", strlen(filename));
-            //printf("Size: %d\r\n", size);
             filename[strlen(filename)-1] = '\0';
-            app_sched_event_put(&sd_evt, sizeof(sd_evt), file_check);
-            
+            app_sched_event_put(&sd_evt, sizeof(sd_evt), file_check);     
             return;
         }
 
-        if (fileTransfer && transferStarted) {//writing data
-            //while (bufferLock){};
-            
+        if (fileTransfer && transferStarted) {
                 bufferBusy = true;
                 for (uint32_t i = 0; i < size; i++) {
                     sd_data_buffer.data[i] = data[i];
@@ -626,12 +600,8 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 num_received++;
                 bufferFilled = true;
                 bufferBusy   = false;
-                
-                //strcpy(&(sd_evt.filename), &filename);
-                //printf("Filename: %s\r\n", sd_evt.filename);
                 sd_evt.filename = filename;
-                app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite);
-                
+                app_sched_event_put(&sd_evt, sizeof(sd_evt), fileWrite); 
                 return;      
         }
     
@@ -1026,7 +996,6 @@ void suspendUARTRX(int fakePin) {
 
 //Re-enable UART RX after suspending it by changing the RX pin back.
 void resumeUARTRX() {
-  //NRF_UART0 -> TASKS_SUSPEND;
   NRF_UART0 -> PSELRXD = RX_PIN_NUMBER;
   nrf_delay_ms(1);
   noteFlag = 0;
@@ -1127,7 +1096,6 @@ void midi_operations() {
     if (stateChanged){
         resetKeys();
         // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
-        //TODO clear all user lit keys before we go into LTP, and when we exit we clear all system lit keys!!!
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
@@ -1153,11 +1121,6 @@ void midi_operations() {
  */
 int main(void) 
 {
-    //currentMode = VIS;
-    //currentMode = LTP;
-    //stateChanged = true;
-
-    // Initialize BLE.
     uart_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
@@ -1168,25 +1131,16 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
-    // This command below can be used to check if sd card is connected properly; comment out if using scheduler!!!!!!!!
     fatfs_init();
 
-    // Initializing chip detect pin.
+    initIndication();
+    initialize_led_strip(288, 25, 88);
     nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    initIndication();
     advertising_start();
 
-    // LEDs
-    initialize_led_strip(288, 25, 88);
-    //fill_color(RED);
-
-    //midi_delay(init_midi_file("TEST.MID"));
-
-    // Enter main loop.
-    
     for (;;)
     {
         idle_state_handle();

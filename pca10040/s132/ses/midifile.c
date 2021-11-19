@@ -6,7 +6,7 @@
 #include "app_scheduler.h"
 
 bool endFlag = false;
-typedef enum states{VIS, LTP, PA}Mode;
+typedef enum states{VIS, LTP, PA} Mode;
 float tempoDiv = 1.0;
 extern currentMode;
 extern Key* key_array;
@@ -31,7 +31,7 @@ MidiEvent get_midi_event(uint8_t temp){
 }
 
 void setTempoDiv(float div){
-    if(div != 0){
+    if(div != 0) {
         tempoDiv = div;
         printf("Set tempoDiv to %f\r\n", div);
     }
@@ -178,11 +178,10 @@ static void correct_delay_handler(void* p_context){
         free(mevt);
     }
     printf("BAD TIMES\r\n");
-
 }
 
 
-void learn_next_midi_data(){
+void learn_next_midi_data(){ //NOTE we will need to take a look at what we want LTP to actually do (discuss core functionality)
     unsigned long delay = 0;
     while(!endFlag && delay == 0) {
         uint8_t evt = (read_next_track_event());
