@@ -119,15 +119,48 @@ void led_update (void* p_event_data, uint16_t event_size) {
 }
 
 
+static void blink_key_handler(void* p_context){
+    Color* color = (Color*) p_context;
+    if(color != NULL) {
+        if(color == LEARN_COLOR){
+            set_key(*delayNote, true, true, 1, *color);
+        }
+        else {
+            set_key(*delayNote, true, false, 1, *color);
+        }
+        free(color);
+    }
+    else
+        printf("Color was null\r\n");
+}
+
+
+void blink_key(Color color) {
+     if(color == LEARN_COLOR) {
+        set_key(i, true, true, 1, OFF);
+    }
+    else {
+        set_key(i, true, false, 1, OFF);
+    }
+    Color* blinkColor = malloc(sizeof(Color));
+    *blinkColor = color;
+    APP_TIMER_DEF(key_blinker);
+    ret_code_t err_code;
+    err_code = app_timer_create(&key_blinker, APP_TIMER_MODE_SINGLE_SHOT, blink_key_handler);
+    APP_ERROR_CHECK(err_code);
+    err_code = app_timer_start(key_blinker, APP_TIMER_TICKS(300), blinkColor);
+    APP_ERROR_CHECK(err_code);
+}
+
+
 static void correct_delay_handler(void* p_context){
-    //MidiEvent* mevt = (MidiEvent*) p_context;
     uint8_t* delayNote = (uint8_t*) p_context;
     if(delayNote != NULL) {
-        printf("Delay key %i\r\n", delayNote);
         set_key(*delayNote, true, true, 1, LEARN_COLOR);
         free(delayNote);
     }
-    printf("BAD TIMES\r\n");
+    else
+        printf("uint8_t was null\r\n");
 }
 
 
@@ -145,7 +178,8 @@ void learnDelay (void* p_event_data, uint16_t event_size) {
         APP_ERROR_CHECK(err_code);
         free(evt);
     }
-    printf("SAD TIMES\r\n");
+    else
+        printf("sd_write_evt was null\r\n");
 }
 
 
@@ -606,14 +640,14 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
             memset(filename,'\0', sizeof(filename));
-            //resumeUARTRX();
             return;
         }
         
         if (strncmp(&data, "File Transfer",13) == 0) {
+            currentMode = VIS;
+            stateChanged = true;
             send_Message("Transfer");
             fileTransfer = true;
-            //suspendUARTRX();
             return;
         }
 

@@ -172,11 +172,17 @@ unsigned long read_next_midi_data(){
 
 void learn_next_midi_data(){ //NOTE we will need to take a look at what we want LTP to actually do (discuss core functionality)
     unsigned long delay = 0;
-    while(!endFlag && delay == 0) {
-        uint8_t evt = (read_next_track_event());
-        uint8_t chan = evt & 0xF;
+    bool nextSet = false;
+    while(!endFlag && !nextSet) {
+        uint8_t evt = read_next_track_event();
+        uint8_t channel = evt & 0xF;
         evt &= 0xF0;
-        if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
+        if ((evt == 0x90 || evt == 0x80) && channel != 0xA) {
+            if(delay != 0) {
+                nextSet = false;
+                f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) - 1);
+                break;
+            }
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90) {
                 //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
@@ -194,11 +200,6 @@ void learn_next_midi_data(){ //NOTE we will need to take a look at what we want 
             }
         }
         delay = get_variable_data();
-    }
-    
-    if (endFlag) {
-      //return -1;
-      // TODO: Pass this information along?
     }
 }
 
