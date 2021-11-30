@@ -67,6 +67,7 @@
 #define BLE_BUF_SIZE                    256
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
 #define SCHED_QUEUE_SIZE                20
+#define LED_SIZE                        176
 
 //Globals
 sd_write_evt sd_evt;
@@ -799,6 +800,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
             isConnected = true;
+            led_connect_animation();
             err_code = ble_nus_data_send(&m_nus, "System Initialized", 19, m_conn_handle);
             break;
 
@@ -806,6 +808,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             nrf_gpio_pin_clear(6);
             isConnected = false;
+            led_disconnect_animation();
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -1110,6 +1113,138 @@ void midi_delay(unsigned long time_ms){
      }
   }
 
+int current_ledR = 0;
+int current_ledL = LED_SIZE;
+int width = 20;
+Color animation_col = GOLD;
+typedef enum directions{LEFT, RIGHT} Direction;
+
+static void swipe_left_handler(void* p_context) {
+    if (current_ledL >= 0){
+        set_led(current_ledL, animation_col);
+    }
+
+    if (!(current_ledL + width > LED_SIZE)) {
+        set_led(current_ledL+width, OFF);
+    }
+
+    if (current_ledL-- + width >= 0) {
+        swipe_delay(LEFT);
+    }
+
+    return;
+}
+
+static void swipe_right_handler(void* p_context) {
+    if (current_ledR <= LED_SIZE){
+        set_led(current_ledR, animation_col);
+    }
+
+    if (current_ledR - width >= 0) {
+        set_led(current_ledR-width, OFF);
+    }
+
+    if (current_ledR++ - width <= LED_SIZE) {
+        swipe_delay(RIGHT);
+    }
+
+    return;
+}
+
+bool fillL = true;
+bool fillR = true;
+Color* color_array;
+Color connected[] = BLE_CONNECTED;
+Color disconnected[] = BLE_DISCONNECTED;
+
+static void fill_unfill_left_handler(void* p_context) {
+    if(current_ledR < 0){
+      return;
+    }
+
+    if(fillL){
+      //set_led(current_ledR++, animation_col);
+      set_led(current_ledR++, color_array[current_ledR % COLOR_SEQUENCE_LEN]);
+    } else {
+      set_led(current_ledR--, OFF);
+    }
+
+    if(current_ledR > LED_SIZE / 2){
+      fillL = false;
+    }
+
+    fill_unfill_delay(LEFT);
+}
+
+static void fill_unfill_right_handler(void* p_context) {
+    if(current_ledL > LED_SIZE){
+      return;
+    }
+
+    if(fillR){
+      //set_led(current_ledL--, animation_col);
+      set_led(current_ledL--, color_array[current_ledL % COLOR_SEQUENCE_LEN]);
+    } else {
+      set_led(current_ledL++, OFF);
+    }
+
+    if(current_ledL < LED_SIZE / 2){
+      fillR = false;
+    }
+
+    fill_unfill_delay(RIGHT);
+}
+
+int swipe_delay_ms = 5;
+
+void swipe_delay(Direction dir){
+    
+    ret_code_t err_code;
+
+    if (dir == RIGHT) {
+       APP_TIMER_DEF(swipe_timerR);
+       err_code = app_timer_create(&swipe_timerR, APP_TIMER_MODE_SINGLE_SHOT, swipe_right_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(swipe_timerR, APP_TIMER_TICKS(swipe_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+
+    }
+    else if (dir == LEFT)
+    {
+       APP_TIMER_DEF(swipe_timerL);
+       err_code = app_timer_create(&swipe_timerL, APP_TIMER_MODE_SINGLE_SHOT, swipe_left_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(swipe_timerL, APP_TIMER_TICKS(swipe_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+    }
+
+    
+}
+
+int fill_unfill_delay_ms = 10;
+
+void fill_unfill_delay(Direction dir){
+    ret_code_t err_code;
+
+    if (dir == RIGHT) {
+       APP_TIMER_DEF(f_u_timerR);
+       err_code = app_timer_create(&f_u_timerR, APP_TIMER_MODE_SINGLE_SHOT, fill_unfill_right_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(f_u_timerR, APP_TIMER_TICKS(fill_unfill_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+
+    }
+    else if (dir == LEFT)
+    {
+       APP_TIMER_DEF(f_u_timerL);
+       err_code = app_timer_create(&f_u_timerL, APP_TIMER_MODE_SINGLE_SHOT, fill_unfill_left_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(f_u_timerL, APP_TIMER_TICKS(fill_unfill_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+    }
+    
+}
+
 void midi_operations() {
     if (stateChanged){
         resetKeys();
@@ -1135,6 +1270,36 @@ void midi_operations() {
     return;
 }
 
+void boot_animation(){
+      animation_col = GOLD;
+      current_ledR = 0;
+      current_ledL = LED_SIZE;
+      swipe_delay(RIGHT);
+      swipe_delay(LEFT);
+}
+
+void led_connect_animation(){
+      color_array = &connected;
+      animation_col = BLUE;
+      current_ledL = LED_SIZE;
+      current_ledR = 0;
+      fillL = true;
+      fillR = true;
+      fill_unfill_delay(RIGHT);
+      fill_unfill_delay(LEFT);
+}
+
+void led_disconnect_animation(){
+      color_array = &disconnected;
+      animation_col = BLUE;
+      current_ledL = LED_SIZE;
+      current_ledR = 0;
+      fillL = true;
+      fillR = true;
+      fill_unfill_delay(RIGHT);
+      fill_unfill_delay(LEFT);
+}
+
 /**@brief Application main function.
  */
 int main(void) 
@@ -1152,12 +1317,15 @@ int main(void)
     fatfs_init();
 
     initIndication();
-    initialize_led_strip(288, 25, 88);
+    initialize_led_strip(LED_SIZE, 25, 88);
     nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
 
     // Start execution.
     printf("\r\nUART started.\r\n");
+    boot_animation();
+
     advertising_start();
+    
 
     for (;;)
     {
