@@ -83,6 +83,8 @@ bool writeEnable    = false;
 bool bufferBusy     = false;
 bool bufferLock     = false;
 bool transfer_over  = false;
+bool isAdvertising  = false;
+bool isPulseAnimation = false;
 volatile bool prevSD         = false;
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
@@ -799,6 +801,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
             isConnected = true;
+            isPulseAnimation = false;
             led_connect_animation();
             err_code = ble_nus_data_send(&m_nus, "System Initialized", 19, m_conn_handle);
             break;
@@ -807,6 +810,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             nrf_gpio_pin_clear(6);
             isConnected = false;
+            isAdvertising = true;
             led_disconnect_animation();
             break;
 
@@ -926,6 +930,9 @@ void uart_event_handle(app_uart_evt_t * p_event)
             }
             else if(noteFlag == 1) //Note number
             {
+              isPulseAnimation = false; // TODO: Do this more elegantly so that we can resume the animation if a key has not been pressed in a certain amount of time.
+                                        // NOTE: This can probably be implemented by incrementing a counter at a set rate and setting the count to zero each time a key is hit.
+                                        // If the counter has surpassed a threshold, we'll resume the animation.
               int keyOffset = 21;
               keyNum = eventUART - keyOffset;
               noteFlag = 2;
@@ -1076,6 +1083,7 @@ static void advertising_start(void)
 {
     uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
+    isAdvertising = true;
 }
 
 void midi_scheduled_event(void* p_event_data, uint16_t event_size){
@@ -1129,8 +1137,10 @@ static void swipe_left_handler(void* p_context) {
 
     if (current_ledL-- + width >= 0) {
         swipe_delay(LEFT);
+        return;
     }
-
+    isPulseAnimation = true;
+    pulse_delay();
     return;
 }
 
@@ -1158,6 +1168,8 @@ Color disconnected[] = BLE_DISCONNECTED;
 
 static void fill_unfill_left_handler(void* p_context) {
     if(current_ledR < 0){
+      isPulseAnimation = true;
+      pulse_delay();
       return;
     }
 
@@ -1192,6 +1204,41 @@ static void fill_unfill_right_handler(void* p_context) {
     }
 
     fill_unfill_delay(RIGHT);
+}
+
+int curr_brightness = 0;
+int pulse_delay_ms = 50;
+bool pulse_increase = true;
+static void pulse_handler(void* p_context) {
+    Color pulse_col = (Color) {.red = 184 * curr_brightness / 255, .green = 134 * curr_brightness / 255, .blue = 11 * curr_brightness / 255};
+    fill_color(pulse_col);
+
+    if(curr_brightness >= 24){
+        pulse_increase = false;
+    }
+    if(curr_brightness <= 0){
+        pulse_increase = true;
+    }
+
+    if(pulse_increase){
+        curr_brightness++;
+    }else{
+        curr_brightness--;
+    }
+
+    pulse_delay();
+}
+
+void pulse_delay(){
+    if(isPulseAnimation && isAdvertising && !isConnected){
+        APP_TIMER_DEF(pulse_timer);
+        ret_code_t err_code = app_timer_create(&pulse_timer, APP_TIMER_MODE_SINGLE_SHOT, pulse_handler);
+        APP_ERROR_CHECK(err_code);
+        err_code = app_timer_start(pulse_timer, APP_TIMER_TICKS(pulse_delay_ms), NULL);
+        APP_ERROR_CHECK(err_code);
+    }else{
+        fill_color(OFF);
+    }
 }
 
 int swipe_delay_ms = 5;
