@@ -187,6 +187,9 @@ void ledIndicate(int action) {
 
 //Sets the color of a single LED
 void set_led(int led_num, Color color){
+    if(led_num >= num_leds || led_num < 0){
+        return;
+    }
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
     int led_ind = led_num * 24;
     for(int i = 0; i < 24; i++) {
@@ -354,11 +357,4 @@ void resetKeys() {
         key_array[i].systemLit = false;
         key_array[i].userLit = false;        
     }
-}
-
-
-//Plays an animation on the LED strip upon BLE connection
-void led_connect_animation(){ //TODO
-    // Will need to figure out how to delay something so we can make an animation. ~ just put the system into PA and play a file hidden from the user
-    //fill_color(RED);
 }
