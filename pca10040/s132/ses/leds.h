@@ -40,7 +40,8 @@ typedef struct _Key {
     int starting_led;
     int num_led;
     bool systemLit;
-    bool userLit;\
+    bool userLit;
+    int hitStreak;
 } Key;
 
 //Init functions

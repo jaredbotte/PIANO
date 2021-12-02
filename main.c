@@ -119,16 +119,14 @@ void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
 }
 
-
 static void correct_delay_handler(void* p_context){
-    //MidiEvent* mevt = (MidiEvent*) p_context;
     uint8_t* delayNote = (uint8_t*) p_context;
     if(delayNote != NULL) {
-        printf("Delay key %i\r\n", delayNote);
         set_key(*delayNote, true, true, 1, LEARN_COLOR);
         free(delayNote);
     }
-    printf("BAD TIMES\r\n");
+    else
+        printf("uint8_t was null\r\n");
 }
 
 
@@ -146,7 +144,8 @@ void learnDelay (void* p_event_data, uint16_t event_size) {
         APP_ERROR_CHECK(err_code);
         free(evt);
     }
-    printf("SAD TIMES\r\n");
+    else
+        printf("sd_write_evt was null\r\n");
 }
 
 
@@ -607,14 +606,14 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
             memset(filename,'\0', sizeof(filename));
-            //resumeUARTRX();
             return;
         }
         
         if (strncmp(&data, "File Transfer",13) == 0) {
+            currentMode = VIS;
+            stateChanged = true;
             send_Message("Transfer");
             fileTransfer = true;
-            //suspendUARTRX();
             return;
         }
 
