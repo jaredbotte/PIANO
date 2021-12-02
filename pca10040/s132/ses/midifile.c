@@ -186,11 +186,18 @@ void learn_next_midi_data(){ //NOTE we will need to take a look at what we want 
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90) {
                 //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
-                if(key_array[mevt.note].userLit) {
+                Key currKey = key_array[mevt.note];
+                if(currKey.userLit) {
+                    //Color streakColor = LEARN_COLOR;
+                    //currKey.hitStreak++;
+                    //streakColor.red *= 2*currKey.hitStreak 
+                    set_key(mevt.note, true, true, mevt.velocity, MAGENTA);
+                    /*
                     set_key(mevt.note, true, true, mevt.velocity, CORRECT_COLOR);
                     sd_write_evt* evt = malloc(sizeof(sd_write_evt));
                     evt->note = mevt.note;
                     app_sched_event_put(evt, sizeof(*evt), learnDelay);
+                    */
                 }
                 else
                     set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);

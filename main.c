@@ -118,41 +118,6 @@ void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
 }
 
-
-static void blink_key_handler(void* p_context){
-    Color* color = (Color*) p_context;
-    if(color != NULL) {
-        if(color == LEARN_COLOR){
-            set_key(*delayNote, true, true, 1, *color);
-        }
-        else {
-            set_key(*delayNote, true, false, 1, *color);
-        }
-        free(color);
-    }
-    else
-        printf("Color was null\r\n");
-}
-
-
-void blink_key(Color color) {
-     if(color == LEARN_COLOR) {
-        set_key(i, true, true, 1, OFF);
-    }
-    else {
-        set_key(i, true, false, 1, OFF);
-    }
-    Color* blinkColor = malloc(sizeof(Color));
-    *blinkColor = color;
-    APP_TIMER_DEF(key_blinker);
-    ret_code_t err_code;
-    err_code = app_timer_create(&key_blinker, APP_TIMER_MODE_SINGLE_SHOT, blink_key_handler);
-    APP_ERROR_CHECK(err_code);
-    err_code = app_timer_start(key_blinker, APP_TIMER_TICKS(300), blinkColor);
-    APP_ERROR_CHECK(err_code);
-}
-
-
 static void correct_delay_handler(void* p_context){
     uint8_t* delayNote = (uint8_t*) p_context;
     if(delayNote != NULL) {

@@ -11,7 +11,7 @@
 int num_leds, led_pin, num_keys;
 uint16_t* buffer;
 Key* key_array;
-extern blink_key(Color);
+//extern blink_key(Color);
 
 
 //--- Interrupt Handlers ---//
@@ -336,12 +336,10 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
         Key current_key = key_array[i];
         if((current_key.systemLit && !current_key.userLit)) { //User hasn't pressed a key
             finished = false;
-            blink_key(LEARN_COLOR);
-            set_key(i, true, true, 1, LEARN_COLOR);
+            //set_key(i, true, true, 1, LEARN_COLOR); I don't think this is nessescary
         }
         if((!current_key.systemLit && current_key.userLit)) { //User is pressing an incorrect key
             finished = false;
-            blink_key(INCORRECT_COLOR);
             set_key(i, true, false, 1, INCORRECT_COLOR);
         }
     }
