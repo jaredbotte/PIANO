@@ -1204,7 +1204,7 @@ int curr_brightness = 0;
 int pulse_delay_ms = 50;
 bool pulse_increase = true;
 static void pulse_handler(void* p_context) {
-    Color pulse_col = (Color) {.red = 184 * curr_brightness / 255, .green = 134 * curr_brightness / 255, .blue = 11 * curr_brightness / 255};
+    Color pulse_col = (Color) {.red = 0 * curr_brightness / 255, .green = 0 * curr_brightness / 255, .blue = 255 * curr_brightness / 255};
     fill_color(pulse_col);
 
     if(curr_brightness >= 24){
