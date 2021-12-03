@@ -9,8 +9,9 @@ bool endFlag = false;
 typedef enum states{VIS, LTP, PA} Mode;
 float tempoDiv = 1.0;
 extern currentMode;
+extern num_keys;
 extern Key* key_array;
-extern learnDelay();
+extern blinkDelay();
 uint8_t last_event;
 
 uint8_t get_next_byte(){
@@ -140,30 +141,45 @@ uint8_t read_next_track_event(){
 
 unsigned long read_next_midi_data(){
     unsigned long delay = 0;
-    uint8_t evt = (read_next_track_event());
-    uint8_t chan = evt & 0xF;
-    evt &= 0xF0;
-    if ((evt == 0x90 || evt == 0x80) && chan != 0xA) {
-      MidiEvent mevt = get_midi_event(evt);
-      if (evt == 0x90) {
-        set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
-      } 
-      else {
-        set_key(mevt.note, false, true, mevt.velocity, OFF);
-      }
+    while(!endFlag && delay == 0) {
+        uint8_t evt = read_next_track_event();
+        uint8_t channel = evt & 0xF;
+        evt &= 0xF0;
+        if ((evt == 0x90 || evt == 0x80) && channel != 0xA) {
+            MidiEvent mevt = get_midi_event(evt);
+            if (evt == 0x90) {
+                if(key_array[mevt.note].hitStreak == 0 || key_array[mevt.note].userLit) {
+                    set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
+                    key_array[mevt.note].userLit = false;
+                }
+                else {
+                    set_key(mevt.note, true, true, mevt.velocity, ALT_COLOR);
+                    key_array[mevt.note].hitStreak = 1;
+                    key_array[mevt.note].userLit = true;
+                }
+            } 
+            else {
+                set_key(mevt.note, false, true, mevt.velocity, OFF);
+                key_array[mevt.note].hitStreak = 1;
+            }
+        }
+        delay = get_variable_data();
     }
-    delay = get_variable_data();
+
+    for(int i = 0; i < num_keys; i++) {
+        key_array[i].hitStreak = 0;
+    }
 
     if (endFlag) {
       return -1;
     }
+
     unsigned long delay_ms = delay * midi_file.mseconds_per_tick;
 
-    // To clear the IDC, IXC, UFC, OFC, DZC, and IOC flags, use 0x0000009F mask on FPSCR register
+    //Clear some flags to ensure floating point keeps working.
     uint32_t fpscr_reg = __get_FPSCR();
     __set_FPSCR(fpscr_reg & ~(0x0000009F));
     (void) __get_FPSCR();
-    // Clear the pending FPU interrupt. Necessary when the application uses a SoftDevice with sleep modes
     NVIC_ClearPendingIRQ(FPU_IRQn);
 
     return delay_ms;
@@ -172,36 +188,25 @@ unsigned long read_next_midi_data(){
 
 void learn_next_midi_data(){ //NOTE we will need to take a look at what we want LTP to actually do (discuss core functionality)
     unsigned long delay = 0;
-    bool nextSet = false;
-    while(!endFlag && !nextSet) {
+    while(!endFlag) {
         uint8_t evt = read_next_track_event();
         uint8_t channel = evt & 0xF;
         evt &= 0xF0;
         if ((evt == 0x90 || evt == 0x80) && channel != 0xA) {
             if(delay != 0) {
-                nextSet = false;
                 f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) - 1);
                 break;
             }
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90) {
-                //TODO make this stay green for ~ half a second before turning back to the learn color if the key is held down
-                Key currKey = key_array[mevt.note];
-                if(currKey.userLit) {
-                    //Color streakColor = LEARN_COLOR;
-                    //currKey.hitStreak++;
-                    //streakColor.red *= 2*currKey.hitStreak 
-                    set_key(mevt.note, true, true, mevt.velocity, MAGENTA);
-                    /*
-                    set_key(mevt.note, true, true, mevt.velocity, CORRECT_COLOR);
-                    sd_write_evt* evt = malloc(sizeof(sd_write_evt));
-                    evt->note = mevt.note;
-                    app_sched_event_put(evt, sizeof(*evt), learnDelay);
-                    */
+                if(key_array[mevt.note].userLit) {
+                    set_key(mevt.note, true, true, mevt.velocity, ALT_COLOR);
+                    key_array[mevt.note].userLit = false;
                 }
-                else
+                else {
                     set_key(mevt.note, true, true, mevt.velocity, LEARN_COLOR);
-            } 
+                }
+            }
             else {
                 set_key(mevt.note, false, true, mevt.velocity, OFF);
             }

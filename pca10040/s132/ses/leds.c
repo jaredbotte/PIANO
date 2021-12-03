@@ -100,7 +100,7 @@ void setup_key_array(int num_keys){
         if(k == 88 - 16){
             key_led--;
         }
-        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false};
+        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false, .hitStreak = 0};
         key_led += width;
     }
 }
