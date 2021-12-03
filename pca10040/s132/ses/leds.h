@@ -7,9 +7,11 @@
 #define OFF (Color) {.red = 0, .green = 0, .blue = 0}
 #define GREEN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 0}
 #define BLUE (Color) {.red = 0, .green = 0, .blue = 255 * BRIGHTNESS}
-#define ORANGE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 0}
+#define YELLOW (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 0}
+#define ORANGE (Color) {.red = 255 * BRIGHTNESS, .green = 165 * BRIGHTNESS, .blue = 0}
 #define RED (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 0}
 #define MAGENTA (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 255 * BRIGHTNESS}
+#define VIOLET (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 255 * BRIGHTNESS}
 #define CYAN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define WHITE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define GOLD (Color) {.red = 184 * BRIGHTNESS, .green = 134 * BRIGHTNESS, .blue = 11 * BRIGHTNESS}
