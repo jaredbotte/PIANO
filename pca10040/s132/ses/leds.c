@@ -229,6 +229,12 @@ void fill_color(Color color){
     }
 }
 
+void fill_section(Color color, int start, int end){
+  for (int n = start; n < end; n++) {
+    set_led(n, color);
+  }
+}
+
 
 //Fills LED strip wil alternating red and blue
 void fill_test(){
