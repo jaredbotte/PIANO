@@ -16,6 +16,7 @@
 #define WHITE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define GOLD (Color) {.red = 184 * BRIGHTNESS, .green = 134 * BRIGHTNESS, .blue = 11 * BRIGHTNESS}
 #define LEARN_COLOR BLUE
+#define ALT_COLOR MAGENTA
 #define INCORRECT_COLOR RED
 #define CORRECT_COLOR GREEN
 #define ERROR_COLOR GOLD

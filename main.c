@@ -106,6 +106,8 @@ int bytes_w = 0, bytes_s = 0, num_received = 0, num_written = 0;
 static int noteFlag = 0;
 static uint8_t lastEvent = 0;
 static uint8_t keyNum = 0x00;
+extern Key* key_array;
+extern num_keys;
 
 static Color rainbow[] = {RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, VIOLET};
 
@@ -127,35 +129,6 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 //Begin Functions
 void led_update (void* p_event_data, uint16_t event_size) {
   update_led_strip();
-}
-
-static void correct_delay_handler(void* p_context){
-    uint8_t* delayNote = (uint8_t*) p_context;
-    if(delayNote != NULL) {
-        set_key(*delayNote, true, true, 1, LEARN_COLOR);
-        free(delayNote);
-    }
-    else
-        printf("uint8_t was null\r\n");
-}
-
-
-void learnDelay (void* p_event_data, uint16_t event_size) {    
-    sd_write_evt* evt = (sd_write_evt*) p_event_data;
-    if(evt != NULL) {
-        uint8_t* delayNote = malloc(sizeof(uint8_t)); 
-        *delayNote = evt->note;
-        APP_TIMER_DEF(correct_delay);
-        ret_code_t err_code;
-        err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
-        APP_ERROR_CHECK(err_code);
-
-        err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), delayNote);
-        APP_ERROR_CHECK(err_code);
-        free(evt);
-    }
-    else
-        printf("sd_write_evt was null\r\n");
 }
 
 
