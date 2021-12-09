@@ -9,6 +9,7 @@ bool endFlag = false;
 typedef enum states{VIS, LTP, PA} Mode;
 float tempoDiv = 1.0;
 extern currentMode;
+extern learnStart;
 extern num_keys;
 extern Key* key_array;
 extern blinkDelay();
@@ -186,17 +187,18 @@ unsigned long read_next_midi_data(){
 }
 
 
-void learn_next_midi_data(){ //NOTE we will need to take a look at what we want LTP to actually do (discuss core functionality)
+void learn_next_midi_data() {
     unsigned long delay = 0;
     while(!endFlag) {
         uint8_t evt = read_next_track_event();
         uint8_t channel = evt & 0xF;
         evt &= 0xF0;
         if ((evt == 0x90 || evt == 0x80) && channel != 0xA) {
-            if(delay != 0) {
+            if(delay != 0 && !learnStart) {
                 f_lseek(&midi_file.ptr, f_tell(&midi_file.ptr) - 1);
                 break;
             }
+            learnStart = false;
             MidiEvent mevt = get_midi_event(evt);
             if(evt == 0x90) {
                 if(key_array[mevt.note].userLit) {
