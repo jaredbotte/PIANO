@@ -11,6 +11,7 @@
 int num_leds, led_pin, num_keys;
 uint16_t* buffer;
 Key* key_array;
+//extern blink_key(Color);
 
 
 //--- Interrupt Handlers ---//
@@ -99,7 +100,7 @@ void setup_key_array(int num_keys){
         if(k == 88 - 16){
             key_led--;
         }
-        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false};
+        key_array[k] = (Key) {.starting_led = key_led, .num_led = width, .systemLit = false, .userLit = false, .hitStreak = 0};
         key_led += width;
     }
 }
@@ -186,6 +187,9 @@ void ledIndicate(int action) {
 
 //Sets the color of a single LED
 void set_led(int led_num, Color color){
+    if(led_num >= num_leds || led_num < 0){
+        return;
+    }
     uint32_t col = (color.green << 16) | (color.red << 8) | color.blue;
     int led_ind = led_num * 24;
     for(int i = 0; i < 24; i++) {
@@ -223,6 +227,12 @@ void fill_color(Color color){
     for(int n = 0; n < num_leds; n++){
         set_led(n, color);
     }
+}
+
+void fill_section(Color color, int start, int end){
+  for (int n = start; n < end; n++) {
+    set_led(n, color);
+  }
 }
 
 
@@ -335,7 +345,7 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
         Key current_key = key_array[i];
         if((current_key.systemLit && !current_key.userLit)) { //User hasn't pressed a key
             finished = false;
-            set_key(i, true, true, 1, LEARN_COLOR);
+            //set_key(i, true, true, 1, LEARN_COLOR); I don't think this is nessescary
         }
         if((!current_key.systemLit && current_key.userLit)) { //User is pressing an incorrect key
             finished = false;
@@ -345,17 +355,12 @@ bool isLearnSetFinished(){ //TODO Add feedback (like blink the leds) instead of 
     return finished;
 }
 
+
+//Clears all the internal key flags
 void resetKeys() {
     fill_color(OFF);
     for(int i = 0; i < num_keys; i++) {
         key_array[i].systemLit = false;
         key_array[i].userLit = false;        
     }
-}
-
-
-//Plays an animation on the LED strip upon BLE connection
-void led_connect_animation(){ //TODO
-    // Will need to figure out how to delay something so we can make an animation. ~ just put the system into PA and play a file hidden from the user
-    //fill_color(RED);
 }

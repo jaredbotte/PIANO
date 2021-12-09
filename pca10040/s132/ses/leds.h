@@ -7,16 +7,23 @@
 #define OFF (Color) {.red = 0, .green = 0, .blue = 0}
 #define GREEN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 0}
 #define BLUE (Color) {.red = 0, .green = 0, .blue = 255 * BRIGHTNESS}
-#define ORANGE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 0}
+#define YELLOW (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 0}
+#define ORANGE (Color) {.red = 255 * BRIGHTNESS, .green = 165 * BRIGHTNESS, .blue = 0}
 #define RED (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 0}
 #define MAGENTA (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 255 * BRIGHTNESS}
+#define VIOLET (Color) {.red = 255 * BRIGHTNESS, .green = 0, .blue = 255 * BRIGHTNESS}
 #define CYAN (Color) {.red = 0, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define WHITE (Color) {.red = 255 * BRIGHTNESS, .green = 255 * BRIGHTNESS, .blue = 255 * BRIGHTNESS}
 #define GOLD (Color) {.red = 184 * BRIGHTNESS, .green = 134 * BRIGHTNESS, .blue = 11 * BRIGHTNESS}
 #define LEARN_COLOR BLUE
+#define ALT_COLOR MAGENTA
 #define INCORRECT_COLOR RED
 #define CORRECT_COLOR GREEN
 #define ERROR_COLOR GOLD
+
+#define BLE_CONNECTED {BLUE, GREEN, GREEN, GREEN, GREEN}
+#define BLE_DISCONNECTED {BLUE, RED, RED, RED, RED}
+#define COLOR_SEQUENCE_LEN 5
 
 //Board Indications
 #define LED_BLUE 6
@@ -36,7 +43,8 @@ typedef struct _Key {
     int starting_led;
     int num_led;
     bool systemLit;
-    bool userLit;\
+    bool userLit;
+    int hitStreak;
 } Key;
 
 //Init functions

@@ -32,7 +32,6 @@ typedef struct _sd_write_buffer {
 typedef struct _sd_write_evt {
         sd_write_buffer buf;
         char* filename;
-        uint8_t note;
 }sd_write_evt;
 
 void fileWrite(void* p_event_data, uint16_t event_size);

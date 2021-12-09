@@ -67,6 +67,7 @@
 #define BLE_BUF_SIZE                    256
 #define SCHED_MAX_EVENT_DATA_SIZE       sizeof(sd_write_evt)
 #define SCHED_QUEUE_SIZE                20
+#define LED_SIZE                        176
 
 //Globals
 sd_write_evt sd_evt;
@@ -82,13 +83,20 @@ bool writeEnable    = false;
 bool bufferBusy     = false;
 bool bufferLock     = false;
 bool transfer_over  = false;
+bool isAdvertising  = false;
+bool animationInterrupted = false;
+bool idleAnimationInterrupted = false;
+bool isPulseAnimation = false;
+bool isIdleAnimation = false;
+bool enableAnims = false;
+bool learnStart = false;
 volatile bool prevSD         = false;
 volatile bool fileTransfer   = false;
 volatile bool bufferFilled   = false;
 volatile bool transferStarted = false;
 volatile bool playNameChange = false;
 volatile bool isConnected = false;
-volatile bool hasSDCard = true;
+volatile bool hasSDCard = false;
 volatile bool stateChanged = false;
 volatile bool velo = false;
 Color userColor = GREEN;
@@ -100,6 +108,13 @@ int bytes_w = 0, bytes_s = 0, num_received = 0, num_written = 0;
 static int noteFlag = 0;
 static uint8_t lastEvent = 0;
 static uint8_t keyNum = 0x00;
+extern Key* key_array;
+extern num_keys;
+
+static Color rainbow[] = {RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, VIOLET};
+
+volatile int animation_counter = 0;
+volatile int idle_animation_counter = 0;
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -119,36 +134,6 @@ void led_update (void* p_event_data, uint16_t event_size) {
 }
 
 
-static void correct_delay_handler(void* p_context){
-    //MidiEvent* mevt = (MidiEvent*) p_context;
-    uint8_t* delayNote = (uint8_t*) p_context;
-    if(delayNote != NULL) {
-        printf("Delay key %i\r\n", delayNote);
-        set_key(*delayNote, true, true, 1, LEARN_COLOR);
-        free(delayNote);
-    }
-    printf("BAD TIMES\r\n");
-}
-
-
-void learnDelay (void* p_event_data, uint16_t event_size) {    
-    sd_write_evt* evt = (sd_write_evt*) p_event_data;
-    if(evt != NULL) {
-        uint8_t* delayNote = malloc(sizeof(uint8_t)); 
-        *delayNote = evt->note;
-        APP_TIMER_DEF(correct_delay);
-        ret_code_t err_code;
-        err_code = app_timer_create(&correct_delay, APP_TIMER_MODE_SINGLE_SHOT, correct_delay_handler);
-        APP_ERROR_CHECK(err_code);
-
-        err_code = app_timer_start(correct_delay, APP_TIMER_TICKS(500), delayNote);
-        APP_ERROR_CHECK(err_code);
-        free(evt);
-    }
-    printf("SAD TIMES\r\n");
-}
-
-
 void send_Message (char* msg) {
     uint16_t size = strlen(msg);
     ble_nus_data_send(&m_nus, msg, &size, m_conn_handle);
@@ -159,20 +144,28 @@ void TIMER3_IRQHandler(void)
 {
   NRF_TIMER3->EVENTS_COMPARE[0] = 0;	
   app_sched_event_put(&sd_evt, sizeof(sd_evt), led_update);
-
-  /*//NOTE have not been tested
-  hasSDCard = nrf_gpio_pin_read(30);
-  if (isConnected) {
-    if (hasSDCard != prevSD) {
-      if (hasSDCard) {
-        send_Message("hasSD");
-      }
-      else{
-        send_Message("noSD");
-      }
-      prevSD = hasSDCard;
+  
+  if (animationInterrupted && !isConnected){
+    if (animation_counter == 250){
+      isPulseAnimation = true;
+      animation_counter = 0;
+      animationInterrupted = false;
+      pulse_delay();
     }
-  }*/
+    animation_counter++;
+  }
+
+  /*
+  if (idleAnimationInterrupted && currentMode == VIS){
+    if (idle_animation_counter == 250){
+      isIdleAnimation = true;
+      idle_animation_counter = 0;
+      idleAnimationInterrupted = false;
+      idle_delay();
+    }
+    idle_animation_counter++;
+  }
+  */
 }
 
 void fileWrite(void* p_event_data, uint16_t event_size) {
@@ -606,14 +599,14 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
             printf("Number of write: %d\r\n", num_written);
             printf("Filename: %s\r\n", filename);
             memset(filename,'\0', sizeof(filename));
-            //resumeUARTRX();
             return;
         }
         
         if (strncmp(&data, "File Transfer",13) == 0) {
+            currentMode = VIS;
+            stateChanged = true;
             send_Message("Transfer");
             fileTransfer = true;
-            //suspendUARTRX();
             return;
         }
 
@@ -799,6 +792,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
             isConnected = true;
+            isPulseAnimation = false;
+            led_connect_animation();
+            isIdleAnimation = true;
             err_code = ble_nus_data_send(&m_nus, "System Initialized", 19, m_conn_handle);
             break;
 
@@ -806,6 +802,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             nrf_gpio_pin_clear(6);
             isConnected = false;
+            isAdvertising = true;
+            led_disconnect_animation();
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -924,6 +922,14 @@ void uart_event_handle(app_uart_evt_t * p_event)
             }
             else if(noteFlag == 1) //Note number
             {
+              isPulseAnimation = false; // TODO: Do this more elegantly so that we can resume the animation if a key has not been pressed in a certain amount of time.
+                                        // NOTE: This can probably be implemented by incrementing a counter at a set rate and setting the count to zero each time a key is hit.
+                                        // If the counter has surpassed a threshold, we'll resume the animation.
+              isIdleAnimation = false;
+              animationInterrupted = true;
+              animation_counter = 0;
+              idleAnimationInterrupted = true;
+              idle_animation_counter = 0;
               int keyOffset = 21;
               keyNum = eventUART - keyOffset;
               noteFlag = 2;
@@ -1074,6 +1080,7 @@ static void advertising_start(void)
 {
     uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
+    isAdvertising = true;
 }
 
 void midi_scheduled_event(void* p_event_data, uint16_t event_size){
@@ -1110,17 +1117,234 @@ void midi_delay(unsigned long time_ms){
      }
   }
 
+int current_ledR = 0;
+int current_ledL = LED_SIZE;
+int width = 20;
+Color animation_col = GOLD;
+typedef enum directions{LEFT, RIGHT} Direction;
+
+static void swipe_left_handler(void* p_context) {
+    if (current_ledL >= 0){
+        set_led(current_ledL, animation_col);
+    }
+
+    if (!(current_ledL + width > LED_SIZE)) {
+        set_led(current_ledL+width, OFF);
+    }
+
+    if (current_ledL-- + width >= 0) {
+        swipe_delay(LEFT);
+        return;
+    }
+    isPulseAnimation = true;
+    pulse_delay();
+    return;
+}
+
+static void swipe_right_handler(void* p_context) {
+    if (current_ledR <= LED_SIZE){
+        set_led(current_ledR, animation_col);
+    }
+
+    if (current_ledR - width >= 0) {
+        set_led(current_ledR-width, OFF);
+    }
+
+    if (current_ledR++ - width <= LED_SIZE) {
+        swipe_delay(RIGHT);
+    }
+
+    return;
+}
+
+bool fillL = true;
+bool fillR = true;
+Color* color_array;
+Color connected[] = BLE_CONNECTED;
+Color disconnected[] = BLE_DISCONNECTED;
+
+static void fill_unfill_left_handler(void* p_context) {
+    if(current_ledR < 0){
+      isPulseAnimation = true;
+      pulse_delay();
+      return;
+    }
+
+    if(fillL){
+      set_led(current_ledR++, color_array[current_ledR % COLOR_SEQUENCE_LEN]);
+    } else {
+      set_led(current_ledR--, OFF);
+    }
+
+    if(current_ledR > LED_SIZE / 2){
+      fillL = false;
+    }
+
+    fill_unfill_delay(LEFT);
+}
+
+static void fill_unfill_right_handler(void* p_context) {
+    if(current_ledL > LED_SIZE){
+      return;
+    }
+
+    if(fillR){
+      //set_led(current_ledL--, animation_col);
+      set_led(current_ledL--, color_array[current_ledL % COLOR_SEQUENCE_LEN]);
+    } else {
+      set_led(current_ledL++, OFF);
+    }
+
+    if(current_ledL < LED_SIZE / 2){
+      fillR = false;
+    }
+
+    fill_unfill_delay(RIGHT);
+}
+
+int curr_brightness = 0;
+int pulse_delay_ms = 50;
+bool pulse_increase = true;
+static void pulse_handler(void* p_context) {
+    Color pulse_col = (Color) {.red = 0 * curr_brightness / 255, .green = 0 * curr_brightness / 255, .blue = 255 * curr_brightness / 255};
+    fill_color(pulse_col);
+
+    if(curr_brightness >= 24){
+        pulse_increase = false;
+    }
+    if(curr_brightness <= 0){
+        pulse_increase = true;
+    }
+
+    if(pulse_increase){
+        curr_brightness++;
+    }else{
+        curr_brightness--;
+    }
+
+    pulse_delay();
+}
+
+void pulse_delay(){
+    if(isPulseAnimation && isAdvertising && !isConnected && enableAnims){
+        APP_TIMER_DEF(pulse_timer);
+        ret_code_t err_code = app_timer_create(&pulse_timer, APP_TIMER_MODE_SINGLE_SHOT, pulse_handler);
+        APP_ERROR_CHECK(err_code);
+        err_code = app_timer_start(pulse_timer, APP_TIMER_TICKS(pulse_delay_ms), NULL);
+        APP_ERROR_CHECK(err_code);
+    }else{
+        fill_color(OFF);
+    }
+}
+
+int curr_brightness_idle = 0;
+int idle_delay_ms = 150;
+bool idle_increase = true;
+int color_pointer = 0;
+
+static void idle_handler(void* p_context) {
+    
+    fill_section(rainbow[color_pointer++%7],0, LED_SIZE/7);
+    fill_section(rainbow[color_pointer++%7],LED_SIZE/7+1, 2*LED_SIZE/7);
+    fill_section(rainbow[color_pointer++%7],2*LED_SIZE/7+1, 3*LED_SIZE/7);
+    fill_section(rainbow[color_pointer++%7],3*LED_SIZE/7+1, 4*LED_SIZE/7);
+    fill_section(rainbow[color_pointer++%7],4*LED_SIZE/7+1, 5*LED_SIZE/7);
+    fill_section(rainbow[color_pointer++%7],5*LED_SIZE/7+1, 6*LED_SIZE/7);
+    fill_section(rainbow[color_pointer++%7],6*LED_SIZE/7+1, LED_SIZE-1);
+    color_pointer++;
+
+    if(curr_brightness >= 24){
+        pulse_increase = false;
+    }
+    if(curr_brightness <= 0){
+        pulse_increase = true;
+    }
+
+    if(pulse_increase){
+        curr_brightness_idle++;
+    }else{
+        curr_brightness_idle--;
+    }
+
+    idle_delay();
+}
+
+//NOTE: Causes system instability when using BLE
+void idle_delay(){
+    if(isIdleAnimation && currentMode == VIS && isConnected){
+        APP_TIMER_DEF(idle_timer);
+        ret_code_t err_code = app_timer_create(&idle_timer, APP_TIMER_MODE_SINGLE_SHOT, idle_handler);
+        APP_ERROR_CHECK(err_code);
+        err_code = app_timer_start(idle_timer, APP_TIMER_TICKS(idle_delay_ms), NULL);
+        APP_ERROR_CHECK(err_code);
+    }else{
+        fill_color(OFF);
+    }
+}
+
+int swipe_delay_ms = 5;
+
+void swipe_delay(Direction dir){
+    
+    ret_code_t err_code;
+
+    if (dir == RIGHT) {
+       APP_TIMER_DEF(swipe_timerR);
+       err_code = app_timer_create(&swipe_timerR, APP_TIMER_MODE_SINGLE_SHOT, swipe_right_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(swipe_timerR, APP_TIMER_TICKS(swipe_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+
+    }
+    else if (dir == LEFT)
+    {
+       APP_TIMER_DEF(swipe_timerL);
+       err_code = app_timer_create(&swipe_timerL, APP_TIMER_MODE_SINGLE_SHOT, swipe_left_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(swipe_timerL, APP_TIMER_TICKS(swipe_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+    }
+
+    
+}
+
+int fill_unfill_delay_ms = 10;
+
+void fill_unfill_delay(Direction dir){
+    ret_code_t err_code;
+
+    if (dir == RIGHT) {
+       APP_TIMER_DEF(f_u_timerR);
+       err_code = app_timer_create(&f_u_timerR, APP_TIMER_MODE_SINGLE_SHOT, fill_unfill_right_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(f_u_timerR, APP_TIMER_TICKS(fill_unfill_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+
+    }
+    else if (dir == LEFT)
+    {
+       APP_TIMER_DEF(f_u_timerL);
+       err_code = app_timer_create(&f_u_timerL, APP_TIMER_MODE_SINGLE_SHOT, fill_unfill_left_handler);
+       APP_ERROR_CHECK(err_code);
+       err_code = app_timer_start(f_u_timerL, APP_TIMER_TICKS(fill_unfill_delay_ms), NULL);
+       APP_ERROR_CHECK(err_code);
+    }
+    
+}
+
 void midi_operations() {
     if (stateChanged){
         resetKeys();
-        // TODO: Make sure the phone knows this bool! Otherwise states will mis-match
+        learnStart = true;
         if (currentMode == LTP && hasSDCard){
             printf("Now in LTP\r\n");
+            isPulseAnimation = false;
             UNUSED_PARAMETER(init_midi_file(fileToPlay));
             learn_next_midi_data();
         } 
         else if (currentMode == PA && hasSDCard){
             printf("Now in PA\r\n");
+            isPulseAnimation = false;
             midi_delay(init_midi_file(fileToPlay));
         } 
         else {
@@ -1135,10 +1359,50 @@ void midi_operations() {
     return;
 }
 
+void boot_animation(){
+      if(enableAnims) {
+          animation_col = GOLD;
+          current_ledR = 0;
+          current_ledL = LED_SIZE;
+          swipe_delay(RIGHT);
+          swipe_delay(LEFT);
+      }
+}
+
+void led_connect_animation(){
+      if(enableAnims) {
+          color_array = &connected;
+          animation_col = BLUE;
+          current_ledL = LED_SIZE;
+          current_ledR = 0;
+          fillL = true;
+          fillR = true;
+          fill_unfill_delay(RIGHT);
+          fill_unfill_delay(LEFT);
+      }
+}
+
+void led_disconnect_animation(){
+      if(enableAnims) {
+          color_array = &disconnected;
+          animation_col = BLUE;
+          current_ledL = LED_SIZE;
+          current_ledR = 0;
+          fillL = true;
+          fillR = true;
+          fill_unfill_delay(RIGHT);
+          fill_unfill_delay(LEFT);
+      }
+}
+
 /**@brief Application main function.
  */
 int main(void) 
 {
+    enableAnims = true;
+    nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
+    hasSDCard = nrf_gpio_pin_read(30);
+    
     uart_init();
     timers_init();
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
@@ -1149,15 +1413,26 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
-    fatfs_init();
-
     initIndication();
-    initialize_led_strip(288, 25, 88);
-    nrf_gpio_cfg_input(30, NRF_GPIO_PIN_NOPULL);
+    initialize_led_strip(LED_SIZE, 25, 88);
+    if(hasSDCard) {
+        fatfs_init();
+    }
+    else {
+        fill_color(RED);
+        update_led_strip();
+        while(true);
+    }
+
+
 
     // Start execution.
     printf("\r\nUART started.\r\n");
+    boot_animation();
+
+
     advertising_start();
+    
 
     for (;;)
     {
